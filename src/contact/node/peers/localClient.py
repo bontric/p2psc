@@ -32,11 +32,6 @@ class LocalClient(Peer):
         self._transport.sendto(mb.build().dgram, self._addr)
 
     async def disconnect(self):
-        if self._transport is not None:
-            self._transport.close()
-            self._transport = None
-
-    async def disconnect(self):
         pass # Do nothing since the server socket for clients should not be closed here 
 
     def connection_made(self, transport):
