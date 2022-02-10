@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from argparse import ArgumentError
 import asyncio
 from audioop import add
@@ -8,6 +10,7 @@ from typing import Any, Callable, List, Tuple, Dict, Union, cast
 
 import zeroconf
 from contact.node import proto
+from contact.node.peers.localClient import LocalClient
 from contact.node.peers.oscDispatcher import OscDispatcher
 from contact.node.peers.peer import Peer, PeerType
 from contact.node.peers.localNode import LocalNode
@@ -22,10 +25,17 @@ class NodeRegistry(OscDispatcher):
         self._addr = addr
         self._running = False
         self._loop_task = None
+        self._loop = asyncio.get_event_loop()
+        
+        # Transports for incoming connections
+        self._ln_transport = None  # Local node transport
+        self._ln_protocol = None
+        self._lc_transport = None  # Local client transport
+        self._lc_protocol = None
 
+        # zeroconf
         self._enable_zeroconf = enable_zeroconf
         self._my_node = my_node  # type: Peer
-
         if enable_zeroconf:
             self._zconf = NodeZconf(addr, self._zconf_node_callback)
 
@@ -110,9 +120,40 @@ class NodeRegistry(OscDispatcher):
                 # ignore type error because they indicate that the osc args differ from the handler signature
                 # which is normal for e.g. peerinfo requests 
                     pass 
+    class _PeerConnection():
+        def __init__(self, registry: NodeRegistry, ptype: PeerType):
+            self._registry = registry
+            self._transport = None
+            self._ptype = ptype
+            self._peers = {str: Peer}
+
+        def datagram_received(self, data, addr):
+            """Called when some datagram is received from a newly connected node."""
+            #peer = self._cn._registry._get_by_transport_addr(addr, self._ptype)
+            peer = self._peers.get(str(addr))
+
+            if peer is None:
+                if self._ptype == PeerType.localNode:
+                    peer = LocalNode(self._registry)
+                elif self._ptype == PeerType.localClient:
+                    peer = LocalClient(self._registry)
+                
+                peer.connection_made(self._transport)
+
+                logging.info(f"Client Connected from addr: {addr}")
+                self._peers = peer
 
 
+            peer.datagram_received(data, addr)
 
+        def connection_made(self, transport):
+            self._transport = transport
+
+        def connection_lost(self, exc):
+            pass
+
+        def error_received(self, exc):
+            pass
 
     def stop(self):
         if not self._running:
@@ -130,6 +171,10 @@ class NodeRegistry(OscDispatcher):
         await self._loop_task
 
     async def __loop(self):
+        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnection(self, PeerType.localNode), local_addr=self._addr)
+        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnection(self, PeerType.localClient), local_addr=(self._addr[0], self._addr[1]+1))
+        
+
         if self._enable_zeroconf:
             self._zconf.serve()
 
