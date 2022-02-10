@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import logging
+from typing import List, Any
 
 from contact.node.peers.localClient import LocalClient
 from contact.node.peers.localNode import LocalNode
@@ -44,7 +45,7 @@ class ContactNode(Peer, OscDispatcher):
 
     def send_all(self, path, args, ptype=None):
         for p in self._registry.get_by_path(path):
-            asyncio.ensure_future(p.send(path, args))
+            asyncio.ensure_future(p.handle_path(self, path, args))
 
     def stop(self):
         if not self._running:
@@ -72,9 +73,6 @@ class ContactNode(Peer, OscDispatcher):
                 break
             # Update NodeInfo if necessary
             self.send_all('/' + proto.ALL_NODES + proto.PEER_INFO, self.to_osc_args())
-
-        self._ln_transport.close()
-        self._ln_transport.close()
 
         # terminate registry and wait till it is finished
         # NOTE: waiting untill proper zeoconfig shutdown

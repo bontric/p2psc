@@ -4,8 +4,9 @@
 # zeroconf service type name
 from argparse import ArgumentError
 import hashlib
-import pty
 from typing import List, Tuple
+
+from pythonosc.osc_message_builder import OscMessageBuilder
 
 
 ZC_SERVICE_TYPE = "_cnosc._udp.local."
@@ -27,6 +28,18 @@ JOIN_GROUP = "/joingroup"  # join a group
 LEAVE_GROUP = "/leavegroup"  # leave a group
 
 # convenience functions for protocol
+def osc_message(path, args):
+    mb = OscMessageBuilder(path)
+    for a in args:
+        mb.add_arg(a)
+    return mb.build()
+
+def osc_dgram(path, args):
+    mb = OscMessageBuilder(path)
+    for a in args:
+        mb.add_arg(a)
+    return mb.build().dgram
+
 def path_has_group(path: str):
     return path.split('/')[1].upper() == path.split('/')[1]
 

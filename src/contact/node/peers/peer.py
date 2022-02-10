@@ -27,13 +27,8 @@ class Peer(abc.ABC):
         self._timeout = timeout  # type: int
         self._map = {} # type: Dict[str, Callable[[Peer, str, Union[List[Any], None]]]]
 
-    async def send(self, path: str, args: Union[Any, List[Any]]):
-        raise NotImplementedError()
-
     async def handle_path(self, peer: Peer, path: str, osc_args: List[Any]):
-        p = self.subscribed_path(path)
-        if p is not None:
-            await self._map[p](peer, path, *osc_args)
+        raise NotImplementedError()
 
     async def disconnect(self):
         raise NotImplementedError()
@@ -78,7 +73,7 @@ class Peer(abc.ABC):
         for r in removed:
             del self._map[r]
         for n in new:
-            self._map[n] = self._default_handler
+            self._map[n] = None
 
         if len(new) > 0 or len(removed) > 0:
             logging.info(f"{self._addr} updated paths: new: {new}, removed: {removed}")
