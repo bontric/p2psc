@@ -44,18 +44,15 @@ class NodeZconf():
         split = [bytes.fromhex(split[0]), bytes.fromhex(split[1])]
         return (socket.inet_ntoa(split[0]), int.from_bytes(split[1], 'little'))
 
-    async def shutdown(self):
-        if not self._running:
+    async def stop(self):
+        if not self._running or self._serve_task is None:
             return
         self._running = False
         self._serve_task.cancel()
         await self._aiozc.async_unregister_service(self._zcinfo)
         logging.debug("Zeroconf shutdown finished")
 
-    def serve(self):
-        self._serve_task = asyncio.ensure_future(self.__serve())
-
-    async def __serve(self):
+    async def serve(self):
         self._aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
 
         await self._aiozc.async_register_service(self._zcinfo, ttl=ZEROCONF_TTL)
@@ -64,6 +61,9 @@ class NodeZconf():
         self._aiozc_browser = AsyncServiceBrowser(
             self._aiozc.zeroconf, [proto.ZC_SERVICE_TYPE], handlers=[self._on_service_state_change])
         
+        self._serve_task = asyncio.ensure_future(self.__loop())
+
+    async def __loop(self):
         self._running = True
         while self._running:
             try:

@@ -194,30 +194,35 @@ class NodeRegistry(OscDispatcher):
             logging.error(
                 f"The node connection for {self._ptype.name}s had an error: {str(exc)})")
 
-    def stop(self):
+    async def stop(self):
         if not self._running:
             return
 
         self._running = False
         self._loop_task.cancel()
 
+        self._ln_transport.close()
+        self._lc_transport.close()
+
+        if self._enable_zeroconf:
+            await self._zconf.stop()
+
     async def serve(self):
         if self._loop_task is not None:
             logging.warning("Node already running!")
             return
 
+        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localNode), local_addr=self._addr)
+        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localClient), local_addr=(self._addr[0], self._addr[1]+1))
+
+        if self._enable_zeroconf:
+            await self._zconf.serve()
+
         self._loop_task = asyncio.create_task(self.__loop())
         await self._loop_task
 
     async def __loop(self):
-        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnection(self, PeerType.localNode), local_addr=self._addr)
-        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnection(self, PeerType.localClient), local_addr=(self._addr[0], self._addr[1]+1))
-
-        if self._enable_zeroconf:
-            self._zconf.serve()
-
         self._running = True
-
         while self._running:
             try:
                 await asyncio.sleep(1)
@@ -225,12 +230,6 @@ class NodeRegistry(OscDispatcher):
                 self._running = False
                 break
             self.cleanup()
-
-        self._ln_transport.close()
-        self._lc_transport.close()
-
-        if self._enable_zeroconf:
-            await self._zconf.shutdown()
 
     def check_exists(self, peer: Peer):
         return peer._hash in self._peers

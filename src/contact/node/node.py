@@ -59,22 +59,24 @@ class ContactNode(Peer, OscDispatcher):
             logging.warning("Node already running!")
             return
 
+        self._registry_task = asyncio.create_task(self._registry.serve())
+
         self._loop_task = asyncio.create_task(self.__loop())
         await self._loop_task
 
-    async def __loop(self):
-        self._registry_task = asyncio.create_task(self._registry.serve())
+        # terminate registry and wait till it is finished
+        # NOTE: waiting until proper zeroconf shutdown and UDP transport close
+        await self._registry.stop()
+        await self._registry_task
 
+    async def __loop(self):
         self._running = True
         while self._running:
             try:
                 await asyncio.sleep(self._update_interval)
             except asyncio.CancelledError:
                 break
-            # Update NodeInfo if necessary
-            self.send_all('/' + proto.ALL_NODES + proto.PEER_INFO, self.to_osc_args())
 
-        # terminate registry and wait till it is finished
-        # NOTE: waiting untill proper zeoconfig shutdown
-        self._registry.stop()
-        await self._registry_task
+            for p in self._registry.get_all(ptype=PeerType.localNode):
+                asyncio.ensure_future(p.handle_message(self,
+                                                       proto.osc_message(proto.PEER_INFO, self.to_osc_args()), is_local=True))
