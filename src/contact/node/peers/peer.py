@@ -1,16 +1,16 @@
 from __future__ import annotations
-
 import abc
-from argparse import ArgumentError
 import enum
 import logging
 import re
 import time
-from typing import Any, Callable, Dict, List, Tuple, Union
-from contact.node import proto
+from typing import *
 
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
+
+from contact.node import proto
+
 
 class PeerType(enum.Enum):
     localNode = 0
@@ -34,7 +34,7 @@ class Peer(abc.ABC):
 
     async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
         raise NotImplementedError()
-    
+
     async def handle_bundle(self, peer: Peer, bundle: OscBundle, is_local=False):
         raise NotImplementedError()
 
@@ -46,13 +46,6 @@ class Peer(abc.ABC):
 
     def is_expired(self):
         return self._last_updateT < (time.time() - self._timeout)
-
-    def has_addr(self):
-        return self._addr[0] != "0.0.0.0"
-
-    def set_addr(self, addr):
-        self._addr = addr
-        self._hash = proto.hash(addr)
 
     def to_osc_args(self):
         return proto.peerinfo_args(self._type.value, self._addr, self._groups, list(self._map.keys()))
@@ -119,7 +112,7 @@ class Peer(abc.ABC):
         """
             Check if the given path matches any local path and return the local path if the given path had a group prefix
         Returns:
-            Union[str, None]: local path (without groop) if this peer has subscribed the given path, None otherwise
+            Union[str, None]: local path (without group) if this peer has subscribed the given path, None otherwise
         """
 
         # if groups are present we check if the path matches our group

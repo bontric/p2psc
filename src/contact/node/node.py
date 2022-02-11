@@ -1,19 +1,16 @@
 from __future__ import annotations
+from typing import *
 import asyncio
 import logging
-from typing import List, Any
 
-from contact.node.peers.localClient import LocalClient
-from contact.node.peers.localNode import LocalNode
-from contact.node.peers.oscDispatcher import OscDispatcher
+from pythonosc.osc_message import OscMessage
+
 from contact.node.peers.peer import Peer, PeerType
 from contact.node.registry import NodeRegistry
 from contact.node import proto
 
-from pythonosc.osc_message import OscMessage
 
-
-class ContactNode(Peer, OscDispatcher):
+class ContactNode(Peer):
     def __init__(self, name, addr, enable_zeroconf=True) -> None:
         self._local_client_addr = addr
         super().__init__(addr, groups=[name, proto.ALL_NODES])

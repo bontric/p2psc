@@ -1,22 +1,22 @@
+from typing import *
 from argparse import ArgumentError
 import asyncio
-from concurrent.futures import CancelledError
 import logging
 import socket
-from turtle import update
-from typing import Callable, Tuple
 import ipaddress
 
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf, AsyncServiceBrowser
+
 from contact.node import proto
 
 ZEROCONF_TTL = 10
 ZEROCONF_UPDATE_INTERVAL = 15
 
+
 class NodeZconf():
-    def __init__(self, addr: Tuple[str, int], node_callback: Callable[[Tuple[str, int], ServiceStateChange], None] ) -> None:
+    def __init__(self, addr: Tuple[str, int], node_callback: Callable[[Tuple[str, int], ServiceStateChange], None]) -> None:
         self._node_callback = node_callback
         self._addr = addr
         self._aiozc = None  # type: AsyncZeroconf
@@ -60,7 +60,7 @@ class NodeZconf():
 
         self._aiozc_browser = AsyncServiceBrowser(
             self._aiozc.zeroconf, [proto.ZC_SERVICE_TYPE], handlers=[self._on_service_state_change])
-        
+
         self._serve_task = asyncio.ensure_future(self.__loop())
 
     async def __loop(self):
@@ -69,7 +69,7 @@ class NodeZconf():
             try:
                 await asyncio.sleep(ZEROCONF_UPDATE_INTERVAL)
                 await self._aiozc.async_update_service(self._zcinfo)
-            except CancelledError:
+            except asyncio.CancelledError:
                 return
 
     def _on_service_state_change(self, zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
@@ -82,9 +82,11 @@ class NodeZconf():
             return
 
         try:
+            # TODO: IPv6 ..
             node_addr = self.convert_str_to_addr(name_split[0])
             if not ipaddress.IPv4Address(node_addr[0]).is_link_local and not ipaddress.IPv4Address(node_addr[0]).is_loopback:
-                logging.warning(f"Received non link-local IPv4 address from peer: {node_addr[0]}")
+                logging.warning(
+                    f"Received non link-local IPv4 address from peer: {node_addr[0]}")
         except Exception as e:
             logging.warning(f"Received invalid Node address: {str(e)}")
             return

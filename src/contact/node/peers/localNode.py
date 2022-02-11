@@ -1,14 +1,11 @@
-from asyncio import Transport
 import logging
-import time
-from typing import Any, List, Tuple, Union
-from contact.node import proto
-from contact.node.peers.oscDispatcher import OscDispatcher
-from contact.node.peers.peer import Peer, PeerType
-
+from typing import *
 from asyncio import DatagramTransport
 
 from pythonosc.osc_message import OscMessage
+
+from contact.node import proto
+from contact.node.peers.peer import Peer, PeerType
 
 
 class LocalNode(Peer):
