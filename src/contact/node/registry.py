@@ -59,10 +59,6 @@ class NodeRegistry():
             self._peers[h]._last_updateT = time.time()
             return
 
-        if not proto.is_initiator(self._addr, addr):
-            logging.info(f"DISCOVERED node at {addr} (other is initiator)")
-            return
-
         logging.info(f"DISCOVERED node at {addr}, connecting..")
 
         peer = LocalNode(self._ln_transport, addr)
