@@ -15,6 +15,7 @@ STR_LIST_SEP = " "
 
 # Node commands
 PEER_INFO = "/peerinfo"  # Request/Send Node Info
+ALL_NODES_PEER_INFO  = "/" + ALL_NODES + "/" + PEER_INFO # peerinfo for all nodes
 ALL_NODE_INFO = "/allnodeinfo"
 TEST = "/test"  # print the message
 REG_PATH = "/regpath"  # register a path
@@ -40,11 +41,12 @@ def osc_dgram(path, args):
 
 
 def path_has_group(path: str):
-    return path.split('/')[1].upper() == path.split('/')[1]
+    s = path.split('/')
+    return len(s) > 2 and s[2] == ''
 
 
 def remove_group_from_path(path: str):
-    return '/'+'/'.join(path.split('/')[2:])
+    return '/'+'/'.join(path.split('/')[3:])
 
 
 def get_group_from_path(path: str):

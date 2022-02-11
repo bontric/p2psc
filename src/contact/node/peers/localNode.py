@@ -9,6 +9,10 @@ from contact.node.peers.peer import Peer, PeerType
 
 
 class LocalNode(Peer):
+    """
+    Represents a Node which connects from the same machine or local network. 
+    """
+
     def __init__(self, transport: DatagramTransport, addr: Tuple[int, str], groups: List[str] = [proto.ALL_NODES]) -> None:
         super().__init__(addr, groups=groups)
 
@@ -17,21 +21,20 @@ class LocalNode(Peer):
 
         self.add_path(proto.PEER_INFO, None)
 
-    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
+    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any]):
         if self.is_expired() or self._transport.is_closing():
-            logging.warning(f"Trying to send on expired/disconnected peer {self._addr}")
-
-        p = self.subscribed_path(path, is_local=is_local)
+            return
+        p = self.subscribed_path(path)
 
         if p is not None:
             logging.debug(f"Sending to localNode {self._addr}: {path} {osc_args}")
             self._transport.sendto(proto.osc_dgram(path, osc_args), self._addr)
 
-    async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
+    async def handle_message(self, peer: Peer, message: OscMessage):
         if self.is_expired() or self._transport.is_closing():
-            logging.warning(f"Trying to send on expired/disconnected peer {self._addr}")
+            return
 
-        p = self.subscribed_path(message.address, is_local=is_local)
+        p = self.subscribed_path(message.address)
 
         if p is not None:
             logging.debug(
