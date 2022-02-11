@@ -20,7 +20,23 @@ class PeerType(enum.Enum):
 
 
 class Peer(abc.ABC):
-    def __init__(self, addr: Tuple[str, int] = ("0.0.0.0", 0), groups: List[str] = None, timeout=30) -> None:
+    """
+    Represents a generic peer in the network. These can be:
+    + localNode:    Node on the same machine or local network
+    + localClient:  Client on the same machine or local network
+    + remoteClient: Client connecting via the internet
+    + remoteNode:   Node connecting via the internet
+
+
+    """
+    def __init__(self, addr: Tuple[str, int], groups: List[str] = None, timeout=10) -> None:
+        """ 
+        Parameters:
+            addr    : This peer's network addres which is used to uniquely identify it (IP + port)
+            groups  : Groups to which this peer belongs (None for clients since they do not explicitly belong to groups)
+            timeout : Time after which this node becomes "stale" if no PEERINFO request is received
+                      (0 indicates this peer never times out (e.g.: TCP connection or clients)) 
+        """
         self._addr = addr  # type: Tuple[str, int]
         self._hash = proto.hash(addr)  # type: str
         self._groups = groups  # type: List[str]
@@ -30,12 +46,15 @@ class Peer(abc.ABC):
         self._map = {}  # type: Dict[str, Callable[[Peer, str, Union[List[Any], None]]]]
 
     async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
+        """ Forward the given path/osc args to the peer if it subscries the path """
         raise NotImplementedError()
 
     async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
+        """ Forward the given OSCMessage to the peer if it subscries the path """
         raise NotImplementedError()
 
     async def handle_bundle(self, peer: Peer, bundle: OscBundle, is_local=False):
+        """ Forward the given OSCBundle to the peer if it subscries the path """
         raise NotImplementedError()
 
     async def disconnect(self):
@@ -45,7 +64,7 @@ class Peer(abc.ABC):
         return self._hash == __o._hash
 
     def is_expired(self):
-        return self._last_updateT < (time.time() - self._timeout)
+        return self._timeout > 0 and self._last_updateT < (time.time() - self._timeout)
 
     def to_osc_args(self):
         return proto.peerinfo_args(self._type.value, self._addr, self._groups, list(self._map.keys()))
@@ -64,9 +83,9 @@ class Peer(abc.ABC):
         Note: No handlers are added here since we only care about the paths
 
         Parameters:
-            paths (str): Space-seperated list of osc paths
+            paths : Space-seperated list of osc paths
         Returns:
-            updated_paths ((List[str],(List[str]))): (Newly added paths, Removed Paths)
+            updated_paths : (Newly added paths, Removed Paths)
         """
         old_paths = list(self._map.keys())
         updated_paths = proto.str_to_list(paths)
