@@ -4,7 +4,6 @@ from argparse import ArgumentError
 import asyncio
 from audioop import add
 import logging
-import socket
 import time
 from typing import Any, Callable, List, Tuple, Dict, Union, cast
 
@@ -128,12 +127,12 @@ class NodeRegistry(OscDispatcher):
 
             # forward message to clients
             # NOTE: Group information is not forwarded to clients
-            message._address_regexp = proto.remove_group_from_path(message.address)
+            local_message = proto.osc_message(proto.remove_group_from_path(message.address), message.params)
             for p in self.get_all(ptype=PeerType.localClient):
-                asyncio.ensure_future(p.handle_message(peer, message))
+                asyncio.ensure_future(p.handle_message(peer, local_message))
             
             for p in self.get_all(ptype=PeerType.remoteClient):
-                asyncio.ensure_future(p.handle_message(peer, message))
+                asyncio.ensure_future(p.handle_message(peer, local_message))
             return
             
         logging.error("OSC Bundle messages are not supported yet!")
