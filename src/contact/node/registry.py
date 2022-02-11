@@ -161,7 +161,7 @@ class NodeRegistry():
                     raise  # Invalid message
             except:
                 logging.warning(f"Received invalid OSC from {addr}")
-
+                return
 
             peer = self._registry.get_peer(str(addr))
 
