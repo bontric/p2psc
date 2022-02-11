@@ -233,7 +233,10 @@ class NodeRegistry():
 
     def get_all(self, ptype=None) -> List[Peer]:
         if ptype is not None:
-            return list(filter(lambda p: p._type == ptype, self._peers.values()))
+            if type(ptype) == list:
+                return list(filter(lambda p: p._type in ptype, self._peers.values()))
+            else:
+                return list(filter(lambda p: p._type == ptype, self._peers.values()))
 
         return list(self._peers.values())
 
