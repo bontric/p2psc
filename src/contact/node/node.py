@@ -49,6 +49,53 @@ class ContactNode(Peer):
     async def _handle_test(self, peer: Peer, path: str, osc_args: List[Any]):
         print(f"Received TEST message from {peer._addr}: {path} {osc_args}")
 
+    async def _handle_join_group(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid joingroup from {peer._addr}")
+            return
+        logging.info(f"Received joingroup from {peer._addr}: {osc_args}")
+
+        if osc_args[0] not in self._groups:
+            self._groups.append(osc_args[0])
+        else:
+            logging.info(f"Already in group: {osc_args[0]}")
+
+    async def _handle_leave_group(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid joingroup from {peer._addr}")
+            return
+        logging.info(f"Received joingroup from {peer._addr}: {osc_args}")
+
+        if osc_args[0] not in self._groups:
+            logging.info(f"Not in group: {osc_args[0]}")
+        else:
+            self._groups.remove(osc_args[0])
+
+    async def _handle_add_path(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid addpath from {peer._addr}")
+            return
+        logging.info(f"Received addpath from {peer._addr}: {osc_args}")
+
+        if osc_args[0] not in self._paths:
+            self._paths.append(osc_args[0])
+
+        if osc_args[0] not in peer._paths:
+            peer._paths.append(osc_args[0])
+
+    async def _handle_del_path(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid leavegroup from {peer._addr}")
+            return
+        logging.info(f"Received leavegroup from {peer._addr}: {osc_args}")
+
+        if osc_args[0] in self._paths:
+            self._paths.remove(osc_args[0])
+
+        if osc_args[0] in peer._paths:
+            peer._paths.remove(osc_args[0])
+
+
     async def _handle_all_node_info(self, peer: Peer, path: str, osc_args: List[Any]):
         if len(osc_args) != 0 or peer._type != PeerType.localClient:
             return

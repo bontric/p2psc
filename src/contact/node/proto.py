@@ -18,8 +18,8 @@ PEER_INFO = "/peerinfo"  # Request/Send Node Info
 ALL_NODES_PEER_INFO  = "/" + ALL_NODES + "/" + PEER_INFO # peerinfo for all nodes
 ALL_NODE_INFO = "/allnodeinfo"
 TEST = "/test"  # print the message
-REG_PATH = "/regpath"  # register a path
-UNREG_PATH = "/unregpath"  # unregister a path
+ADD_PATH = "/addpath"  # register a path
+DEL_PATH = "/delpath"  # unregister a path
 JOIN_GROUP = "/joingroup"  # join a group
 LEAVE_GROUP = "/leavegroup"  # leave a group
 
