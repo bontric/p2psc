@@ -25,34 +25,45 @@ class ContactNode(Peer):
         self.add_path(proto.TEST, self._handle_test)
         self.add_path(proto.ALL_NODE_INFO, self._handle_all_node_info)
 
-    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
-        p = self.subscribed_path(path, is_local=is_local)
+    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any]):
+        if proto.path_has_group(path):
+            p = self.subscribed_path(path)
+        else:
+            p = self.subscribed_path(path, is_local=True)
 
         if p is not None:
             await self._map[p](peer, path, osc_args)
 
-    async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
-        p = self.subscribed_path(message.address, is_local=is_local)
+    async def handle_message(self, peer: Peer, message: OscMessage):
+        if proto.path_has_group(message.address):
+            p = self.subscribed_path(message.address)
+        else:
+            p = self.subscribed_path(message.address, is_local=True)
 
         if p is not None:
             await self._map[p](peer, message.address, message.params)
 
-    async def _handle_test(self, peer: Peer, path: str, *osc_args: List[Any]):
+    async def _handle_test(self, peer: Peer, path: str, osc_args: List[Any]):
         print(f"Received TEST message from {peer._addr}: {path} {osc_args}")
 
-    async def _handle_all_node_info(self, peer: Peer, path: str):
-        # TODO: this should be a bundle
+    async def _handle_all_node_info(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 0 or peer._type != PeerType.localClient:
+            return
+
+        # TODO: Use bundle?
         for p in self._registry.get_all(PeerType.localNode):
             asyncio.ensure_future(peer.send(proto.PEER_INFO, p.to_osc_args()))
 
         asyncio.ensure_future(peer.send(proto.PEER_INFO, self.to_osc_args()))
 
-    async def _handle_peer_info(self, peer: Peer, path: str, *osc_args: List[Any]):
+    async def _handle_peer_info(self, peer: Peer, path: str, osc_args: List[Any]):
         # NodeInfo request with 0 args is a request for our own peerinfo
-        if len(osc_args) == 0:
-            logging.debug(f"Answering peerinfo request from {peer._addr}")
-            await peer.send('/' + proto.ALL_NODES + proto.PEER_INFO, self.to_osc_args())
+        if len(osc_args) != 0 or peer._type != PeerType.localClient:
             return
+        
+        logging.debug(f"Answering peerinfo request from {peer._addr}")
+        await peer.send(proto.PEER_INFO, self.to_osc_args())
+        
 
     def stop(self):
         if not self._running:
@@ -85,5 +96,4 @@ class ContactNode(Peer):
                 break
 
             for p in self._registry.get_all(ptype=PeerType.localNode):
-                asyncio.ensure_future(p.handle_message(self,
-                                                       proto.osc_message(proto.PEER_INFO, self.to_osc_args()), is_local=True))
+                asyncio.ensure_future(p.handle_message(self, proto.osc_message(proto.ALL_NODES_PEER_INFO, self.to_osc_args())))
