@@ -73,13 +73,17 @@ class NodeRegistry():
 
                 # forward message to clients except for sending
                 for p in self.get_all(ptype=[PeerType.localClient, PeerType.remoteClient]):
+                    if p == peer: 
+                        continue
                     asyncio.ensure_future(p.handle_message(peer, message))
             else:
                 # handle message locally
                 asyncio.ensure_future(self._my_node.handle_message(peer, message))
 
-                # forward message to clients and nodes
+                # forward message to clients and nodes except for sending
                 for p in self.get_all():
+                    if p == peer: 
+                        continue
                     asyncio.ensure_future(p.handle_message(peer, message))
         else:
             logging.error("OSC Bundle messages are not supported yet!")
