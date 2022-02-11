@@ -13,7 +13,7 @@ from contact.node import proto
 class ContactNode(Peer):
     def __init__(self, name, addr, enable_zeroconf=True) -> None:
         self._local_client_addr = addr
-        super().__init__(addr, groups=[name, proto.ALL_NODES])
+        super().__init__(addr, groups=[name, proto.ALL_NODES], paths=[proto.TEST])
         self._type = PeerType.localNode
 
         self._update_interval = 3  # TODO: Make configurable
@@ -21,9 +21,15 @@ class ContactNode(Peer):
         self._loop_task = None
         self._loop = asyncio.get_event_loop()
 
-        self.add_path(proto.PEER_INFO, self._handle_peer_info)
-        self.add_path(proto.TEST, self._handle_test)
-        self.add_path(proto.ALL_NODE_INFO, self._handle_all_node_info)
+        self._map = {
+            proto.PEER_INFO: self._handle_peer_info,
+            proto.TEST: self._handle_test,
+            proto.ALL_NODE_INFO:  self._handle_all_node_info,
+            proto.JOIN_GROUP:  self._handle_join_group,
+            proto.LEAVE_GROUP:  self._handle_leave_group,
+            proto.ADD_PATH: self._handle_add_path,
+            proto.DEL_PATH: self._handle_del_path,
+        }
 
     async def handle_path(self, peer: Peer, path: str, osc_args: List[Any]):
         if proto.path_has_group(path):

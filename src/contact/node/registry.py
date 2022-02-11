@@ -236,7 +236,7 @@ class NodeRegistry():
 
     def add_peer(self, peer: Peer):
         logging.info(
-            f"Added {peer._type}: {peer._addr} {peer._groups} {list(peer._map.keys())}")
+            f"Added {peer._type}: {peer._addr} {peer._groups} {list(peer._paths)}")
         self._peers[peer._hash] = peer
 
     def remove_peer(self, peer: Peer):

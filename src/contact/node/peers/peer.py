@@ -29,7 +29,7 @@ class Peer(abc.ABC):
 
 
     """
-    def __init__(self, addr: Tuple[str, int], groups: List[str] = None, timeout=10) -> None:
+    def __init__(self, addr: Tuple[str, int], groups: List[str] = None, paths: List[str] = [],timeout=10) -> None:
         """ 
         Parameters:
             addr    : This peer's network addres which is used to uniquely identify it (IP + port)
@@ -43,7 +43,7 @@ class Peer(abc.ABC):
         self._type = None  # type: PeerType
         self._last_updateT = time.time()
         self._timeout = timeout  # type: int
-        self._map = {}  # type: Dict[str, Callable[[Peer, str, Union[List[Any], None]]]]
+        self._paths = paths # type: List[str]  
 
     async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
         """ Forward the given path/osc args to the peer if it subscries the path """
@@ -67,15 +67,12 @@ class Peer(abc.ABC):
         return self._timeout > 0 and self._last_updateT < (time.time() - self._timeout)
 
     def to_osc_args(self):
-        return proto.peerinfo_args(self._type.value, self._addr, self._groups, list(self._map.keys()))
+        return proto.peerinfo_args(self._type.value, self._addr, self._groups, self._paths)
 
     @staticmethod
     def is_valid_peerinfo(args):
         return len(args) != 5 or type(args) != int or type(args[1]) != str \
             or type(args[2]) != int or type(args[3]) != str or type(args[4]) != str
-
-    def add_path(self, path: str, handler: Callable[[Peer, str, Union[List[Any], None]], None]):
-        self._map[path] = handler
 
     def update_paths(self, paths: str) -> Tuple[List[str], List[str]]:
         """ 
@@ -87,15 +84,15 @@ class Peer(abc.ABC):
         Returns:
             updated_paths : (Newly added paths, Removed Paths)
         """
-        old_paths = list(self._map.keys())
+        old_paths = self._paths
         updated_paths = proto.str_to_list(paths)
         new = list(filter(lambda x: x not in old_paths, updated_paths))
         removed = list(filter(lambda x: x not in updated_paths, old_paths))
 
         for r in removed:
-            del self._map[r]
+            self._paths.remove(r)
         for n in new:
-            self._map[n] = None
+            self._paths.append(n)
 
         if len(new) > 0 or len(removed) > 0:
             logging.info(f"{self._addr} updated paths: new: {new}, removed: {removed}")
@@ -159,7 +156,7 @@ class Peer(abc.ABC):
         pattern = pattern + '$'
         patterncompiled = re.compile(pattern)
 
-        for p in self._map.keys():
+        for p in self._paths:
             if (patterncompiled.match(p)
                     or (('*' in p) and re.match(p.replace('*', '[^/]*?/*'), path))):
                 return path

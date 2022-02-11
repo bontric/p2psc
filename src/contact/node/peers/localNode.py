@@ -14,7 +14,7 @@ class LocalNode(Peer):
     """
 
     def __init__(self, transport: DatagramTransport, addr: Tuple[int, str], groups: List[str] = [proto.ALL_NODES]) -> None:
-        super().__init__(addr, groups=groups)
+        super().__init__(addr, groups=groups, paths=[])
 
         self._type = PeerType.localNode
         self._transport = transport
