@@ -10,6 +10,8 @@ from contact.node.peers.peer import Peer, PeerType
 from contact.node.registry import NodeRegistry
 from contact.node import proto
 
+from pythonosc.osc_message import OscMessage
+
 
 class ContactNode(Peer, OscDispatcher):
     def __init__(self, name, addr, enable_zeroconf=True) -> None:
@@ -17,7 +19,7 @@ class ContactNode(Peer, OscDispatcher):
         super().__init__(addr, groups=[name, proto.ALL_NODES])
         self._type = PeerType.localNode
 
-        self._update_interval = 3
+        self._update_interval = 3  # TODO: Make configurable
         self._registry = NodeRegistry(self._addr, self, enable_zeroconf, timeout=20)
         self._loop_task = None
         self._loop = asyncio.get_event_loop()
@@ -25,6 +27,18 @@ class ContactNode(Peer, OscDispatcher):
         self.add_path(proto.PEER_INFO, self._handle_peer_info)
         self.add_path(proto.TEST, self._handle_test)
         self.add_path(proto.ALL_NODE_INFO, self._handle_all_node_info)
+
+    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
+        p = self.subscribed_path(path, is_local=is_local)
+
+        if p is not None:
+            await self._map[p](peer, path, osc_args)
+
+    async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
+        p = self.subscribed_path(message.address, is_local=is_local)
+
+        if p is not None:
+            await self._map[p](peer, message.address, message.params)
 
     async def _handle_test(self, peer: Peer, path: str, *osc_args: List[Any]):
         print(f"Received TEST message from {peer._addr}: {path} {osc_args}")
@@ -42,10 +56,6 @@ class ContactNode(Peer, OscDispatcher):
             logging.debug(f"Answering peerinfo request from {peer._addr}")
             await peer.send('/' + proto.ALL_NODES + proto.PEER_INFO, self.to_osc_args())
             return
-
-    def send_all(self, path, args, ptype=None):
-        for p in self._registry.get_by_path(path):
-            asyncio.ensure_future(p.handle_path(self, path, args))
 
     def stop(self):
         if not self._running:

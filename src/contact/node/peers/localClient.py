@@ -11,6 +11,8 @@ from contact.node.peers.oscDispatcher import OscDispatcher
 from contact.node.peers.peer import Peer
 from contact.node.peers.peer import Peer, PeerType
 
+from pythonosc.osc_message import OscMessage
+
 
 class LocalClient(Peer):
     def __init__(self, transport: DatagramTransport, addr) -> None:
@@ -18,11 +20,17 @@ class LocalClient(Peer):
         self._type = PeerType.localClient
         self._transport = transport
 
-    async def send(self, path: str, args: str):
-        if self.is_expired() or self._transport is None:
-            return
+    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
+        p = self.subscribed_path(path, is_local=is_local)
 
-        self._transport.sendto(proto.osc_dgram(path, args) , self._addr)
+        if p is not None:
+            await self._map[p](peer, path, osc_args)
+
+    async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
+        p = self.subscribed_path(message.address, is_local=is_local)
+
+        if p is not None:
+            await self._map[p](peer, message.address, message.params)
 
     async def disconnect(self):
         pass # Do nothing since the server socket for clients should not be closed here 

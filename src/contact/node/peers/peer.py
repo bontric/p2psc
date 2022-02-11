@@ -9,6 +9,8 @@ import time
 from typing import Any, Callable, Dict, List, Tuple, Union
 from contact.node import proto
 
+from pythonosc.osc_message import OscMessage
+from pythonosc.osc_bundle import OscBundle
 
 class PeerType(enum.Enum):
     localNode = 0
@@ -25,15 +27,18 @@ class Peer(abc.ABC):
         self._type = None  # type: PeerType
         self._last_updateT = time.time()
         self._timeout = timeout  # type: int
-        self._map = {} # type: Dict[str, Callable[[Peer, str, Union[List[Any], None]]]]
+        self._map = {}  # type: Dict[str, Callable[[Peer, str, Union[List[Any], None]]]]
 
-    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any]):
+    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
+        raise NotImplementedError()
+
+    async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
+        raise NotImplementedError()
+    
+    async def handle_bundle(self, peer: Peer, bundle: OscBundle, is_local=False):
         raise NotImplementedError()
 
     async def disconnect(self):
-        raise NotImplementedError()
-
-    async def _default_handler(peer: Peer, path: str, *args: Union[List[Any], None]):
         raise NotImplementedError()
 
     def __eq__(self, __o: Peer) -> bool:
@@ -52,13 +57,18 @@ class Peer(abc.ABC):
     def to_osc_args(self):
         return proto.peerinfo_args(self._type.value, self._addr, self._groups, list(self._map.keys()))
 
+    @staticmethod
+    def is_valid_peerinfo(args):
+        return len(args) != 5 or type(args) != int or type(args[1]) != str \
+            or type(args[2]) != int or type(args[3]) != str or type(args[4]) != str
+
     def add_path(self, path: str, handler: Callable[[Peer, str, Union[List[Any], None]], None]):
         self._map[path] = handler
 
     def update_paths(self, paths: str) -> Tuple[List[str], List[str]]:
         """ 
         Update paths from path list string and return newly added paths and removed paths as lists.
-        New path are attached to this peer's default handler
+        Note: No handlers are added here since we only care about the paths
 
         Parameters:
             paths (str): Space-seperated list of osc paths

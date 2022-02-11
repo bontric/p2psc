@@ -18,6 +18,7 @@ from contact.node.zconf import NodeZconf
 
 from pythonosc.osc_packet import OscPacket, TimedMessage
 from pythonosc.osc_message import OscMessage
+from pythonosc.osc_bundle import OscBundle
 
 
 class NodeRegistry(OscDispatcher):
@@ -72,97 +73,94 @@ class NodeRegistry(OscDispatcher):
         peer = LocalNode(self._ln_transport, addr)
         self.add_peer(peer)
 
-    def on_osc(self, peer: Peer, path: str, osc_args: Union[Any, List[Any]] = None, exception: Exception = None):
-        if exception is not None:
-            logging.info(
-                f"Peer {peer._addr} disconnected: {exception}")
-            self.remove_peer(peer)
+    def _osc_from_localClient(self, peer, bundle: OscBundle, message: OscMessage):
+        if message is not None:
+            # Message with no group is ONLY handled locally and forwarded to clients (if they subscribe)
+            if not proto.path_has_group(message.address):
+                # handle message locally
+                asyncio.ensure_future(self._my_node.handle_message(peer, message, is_local=True))
+                
+                # forward to clients
+                for p in self.get_all(ptype=PeerType.localClient):
+                    asyncio.ensure_future(p.handle_message(peer, message, is_local=True))
+                for p in self.get_all(ptype=PeerType.remoteClient):
+                    asyncio.ensure_future(p.handle_message(peer, message, is_local=True))
+            else:
+                # handle message locally
+                asyncio.ensure_future(self._my_node.handle_message(peer, message))
+                
+                # forward message to peers/clients
+                for p in self.get_all():
+                    # FIXME: Group messages will not be forwarded to clients
+                    asyncio.ensure_future(p.handle_message(peer, message))
+            
             return
-
-        if peer._type == PeerType.localNode:
-            # Received a message from a link-local node with GROUP prefix in path
-            if not proto.path_has_group(path):
-                logging.warning(
-                    f"Received osc from {peer._addr} without group prefix : {path}")
-                return
-
-            if proto.get_group_from_path(path) not in self._my_node._groups:
-                logging.warning(
-                    f"Received osc from {peer._addr} for unmatched group: {path}")
-                return
-
-            logging.debug(f"Received osc from {peer._addr}: {path} {osc_args}")
-
-            if peer._hash not in self._peers:
-                self.add_peer(peer)
-
-            # handle node info requests at the apropriate node:
-            if peer.subscribed_path(path) == proto.PEER_INFO:
-                asyncio.ensure_future(peer.handle_path(peer, path, osc_args))
-                return
-
-            # handle locally
-            asyncio.ensure_future(self._my_node.handle_path(peer, path, osc_args))
-
-        if peer._type == PeerType.localClient:
-            if peer._hash not in self._peers:
-                self.add_peer(peer)
-
-            # handle locally
-            asyncio.ensure_future(self._my_node.handle_path(peer, path, osc_args))
-
-            if proto.path_has_group(path):
-                # forward to all nodes if path contains group
-                try:
-                    for p in self.get_all(ptype=PeerType.localNode):
-                        asyncio.ensure_future(p.handle_path(peer, path, osc_args))
-                except TypeError:
-                    # ignore type error because they indicate that the osc args differ from the handler signature
-                    # which is normal for e.g. peerinfo requests
-                    pass
-
-    def _osc_from_localClient(self, peer, t_messages: List[TimedMessage]):
-        for tm in t_messages:
-            logging.debug(
-                f"Received OSC from LocalClient {peer._addr}: {tm.message.address} {tm.message.params}")
-
-    def _osc_from_localNode(self, peer: Peer, t_messages: List[TimedMessage]):
-
-        if len(t_messages) == 1 \
-            and proto.remove_group_from_path(t_messages[0].message.address) == proto.PEER_INFO:
-
-            tm = t_messages[0]
-            if len(tm.message.params) != 5:
-                logging.warning(
-                    "Received invalid PEERINFO from {peer._addr}: tm.message.params")
-                return
-            logging.debug(f"Received PEERINFO from {peer._addr}: {tm.message.params}")
-
-            peer.update_groups(tm.message.params[3])
-            peer.update_paths(tm.message.params[4])
-            peer._last_updateT = time.time()
-            return
-
+        
+        logging.error("OSC Bundle messages are not supported yet!")
         # TODO: HANDLE BUNDLE
         # TODO: handle other messages from peer!
-        for tm in t_messages:
-            logging.debug(
-                f"Received OSC from LocalClient {peer._addr}: {tm.message.address} {tm.message.params}")
 
-    class _PeerConnection():
+
+    def _osc_from_localNode(self, peer: Peer, bundle: OscBundle, message: OscMessage):
+        if message is not None:
+            # Handle peerinfo here because only the registry needs to know
+            if message.address == proto.PEER_INFO:
+                if not Peer.is_valid_peerinfo(message.params):
+                    logging.warning(
+                        "Received invalid PEERINFO from {peer._addr}: {message.params}")
+                    return
+                logging.debug(
+                    f"Received PEERINFO from {peer._addr}: {message.params}")
+
+                peer.update_groups(message.params[3])
+                peer.update_paths(message.params[4])
+                peer._last_updateT = time.time()
+                return
+
+            if not proto.path_has_group(message.address):
+                logging.warning(f"Received invalid OSC from localNode {peer._addr}: (No group)")
+            
+            logging.debug(
+                f"Received OSC from LocalNode {peer._addr}: {message.address} {message.params}")
+            
+            # handle message locally
+            asyncio.ensure_future(self._my_node.handle_message(peer, message))
+
+            # forward message to clients
+            # NOTE: Group information is not forwarded to clients
+            message._address_regexp = proto.remove_group_from_path(message.address)
+            for p in self.get_all(ptype=PeerType.localClient):
+                asyncio.ensure_future(p.handle_message(peer, message))
+            
+            for p in self.get_all(ptype=PeerType.remoteClient):
+                asyncio.ensure_future(p.handle_message(peer, message))
+            return
+            
+        logging.error("OSC Bundle messages are not supported yet!")
+        # TODO: HANDLE BUNDLE
+        # TODO: handle other messages from peer!
+        
+
+    class _PeerConnectionUdp():
         def __init__(self, registry: NodeRegistry, ptype: PeerType):
             self._registry = registry
             self._transport = None
             self._ptype = ptype
             self._peers = {str: Peer}
 
-        def datagram_received(self, data, addr):
+        def datagram_received(self, dgram, addr):
             """Called when a datagram is received from a newly connected peer."""
 
             # Parse OSC message
             try:
-                # TODO: Does this support bundles?
-                t_messages = OscPacket(data).messages
+                if OscBundle.dgram_is_bundle(dgram):
+                    bundle = OscBundle(dgram)
+                    msg = None
+                elif OscMessage.dgram_is_message(dgram):
+                    msg = OscMessage(dgram)
+                    bundle = None
+                else:
+                    raise  # Invalid message
             except:
                 logging.warning(f"Received invalid OSC from {addr}")
 
@@ -174,7 +172,7 @@ class NodeRegistry(OscDispatcher):
                 if peer is None:
                     peer = LocalClient(self._transport, addr)
                     self._registry.add_peer(peer)
-                self._registry._osc_from_localClient(peer, t_messages)
+                self._registry._osc_from_localClient(peer, bundle, msg)
                 return
 
             elif self._ptype == PeerType.localNode:
@@ -182,7 +180,7 @@ class NodeRegistry(OscDispatcher):
                     peer = LocalNode(self._transport, addr)
                     self._registry.add_peer(peer)
                     logging.info(f"Client Connected from addr: {addr}")
-                self._registry._osc_from_localNode(peer, t_messages)
+                self._registry._osc_from_localNode(peer, bundle, msg)
 
         def connection_made(self, transport):
             self._transport = transport
@@ -240,27 +238,8 @@ class NodeRegistry(OscDispatcher):
 
         return list(self._peers.values())
 
-    def _get_by_transport_addr(self, addr, ptype) -> Peer:
-        for p in self._peers.values():
-            if p._type == ptype and p._transport_addr is not None \
-                    and p._transport_addr[0] == addr[0] and p._transport_addr[1] == addr[1]:
-                return p
-        return None
-
     def get_peer(self, addr: Tuple[str, int]) -> Peer:
         return self._peers.get(proto.hash(addr))
-
-    def get_by_path(self, path: str, ptype=None) -> List[Peer]:
-        """ Return all peers matching the given group """
-        peers = []
-
-        for p in self._peers.values():
-            if ptype is not None and p._type != ptype:
-                continue  # filter out nodes not matching ptype
-            if p.subscribed_path(path):
-                peers.append(p)
-
-        return peers
 
     def add_peer(self, peer: Peer):
         logging.info(
@@ -288,5 +267,5 @@ class NodeRegistry(OscDispatcher):
                 asyncio.ensure_future(self.disconnect_peer(self._peers[k]))
 
     async def disconnect_peer(self, peer: Peer):
-        await peer.disconnect()  # TODO: This might cause trouble with TCP connections
+        await peer.disconnect()
         del self._peers[peer._hash]
