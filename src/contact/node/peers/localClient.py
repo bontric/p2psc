@@ -4,6 +4,7 @@ from typing import *
 from asyncio import DatagramTransport
 
 from pythonosc.osc_message import OscMessage
+from pythonosc.osc_bundle import OscBundle
 from contact.node import proto
 
 from contact.node.peers.peer import Peer, PeerType
@@ -19,24 +20,15 @@ class LocalClient(Peer):
         self._type = PeerType.localClient
         self._transport = transport
 
-    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any]):
-        if self._transport.is_closing():
-            return 
-
-        # If path contains group, check if client explicitly subscribes this
-        p = self.subscribed_path(path, is_local=True)
-
-        # if not, remove group and try again
-        if p is None:
-            p = self.subscribed_path(proto.remove_group_from_path(path), is_local=True)
-
-        if p is not None:
-            logging.debug(f"Sending to localClient {self._addr}: {path} {osc_args}")
-            self._transport.sendto(proto.osc_dgram(path, osc_args), self._addr)
-
-    async def handle_message(self, peer: Peer, message: OscMessage):
+    async def handle_message(self, peer: Peer, message: Union[OscMessage, OscBundle, Tuple[str, List[Any]]]):
         if self._transport.is_closing():
             return
+
+        if type(message) == Tuple:
+            message = proto.osc_message(message[0], message[1])
+        elif type(message) == OscBundle:
+            raise NotImplementedError()
+
         # If path contains group, check if client explicitly subscribes this
         p = self.subscribed_path(message.address, is_local=True)
 
@@ -47,15 +39,21 @@ class LocalClient(Peer):
 
         if p is not None:
             logging.debug(
-                f"Sending to localNode {self._addr}: {message.address} {message.params}")
+                f"Sending to localClient {self._addr}: {message.address} {message.params}")
             self._transport.sendto(message.dgram, self._addr)
-    
-    async def send(self, path: str, osc_args: List[Any]):
-        """ Send to peer without checking """
+
+    async def send(self, message: Union[OscMessage, OscBundle, Tuple[str, List[Any]]]):
         if self._transport.is_closing():
             return
-        logging.debug(f"Sending to localNode {self._addr}: {path} {osc_args}")
-        self._transport.sendto(proto.osc_dgram(path, osc_args), self._addr)
+
+        if type(message) == tuple:
+            message = proto.osc_message(message[0], message[1])
+        elif type(message) == OscBundle:
+            raise NotImplementedError()
+
+        logging.debug(
+            f"Sending to localClient {self._addr}: {message.address} {message.params}")
+        self._transport.sendto(message.dgram, self._addr)
 
     async def disconnect(self):
         pass  # Do nothing since the server socket for clients should not be closed here

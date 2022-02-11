@@ -45,16 +45,12 @@ class Peer(abc.ABC):
         self._timeout = timeout  # type: int
         self._paths = paths # type: List[str]  
 
-    async def handle_path(self, peer: Peer, path: str, osc_args: List[Any], is_local=False):
-        """ Forward the given path/osc args to the peer if it subscries the path """
+    async def send(self, peer: Peer, path: str, osc_args: List[Any]):
+        """ Send the given message to the peer if it subscries the path """
         raise NotImplementedError()
 
-    async def handle_message(self, peer: Peer, message: OscMessage, is_local=False):
-        """ Forward the given OSCMessage to the peer if it subscries the path """
-        raise NotImplementedError()
-
-    async def handle_bundle(self, peer: Peer, bundle: OscBundle, is_local=False):
-        """ Forward the given OSCBundle to the peer if it subscries the path """
+    async def handle_message(self, peer: Peer, msg: Union[OscMessage, OscBundle, Tuple(str, List[Any])]):
+        """ Send the given message to the peer if it subscries the path """
         raise NotImplementedError()
 
     async def disconnect(self):
