@@ -23,6 +23,7 @@ from ast import AsyncFunctionDef
 import asyncio
 import logging
 import signal
+import socket
 import sys
 from typing import Any, List, Tuple
 
@@ -56,7 +57,10 @@ def main(args):
 async def main_loop(args):
     global node
     name = args.name.upper() # only allow upper case names
-    addr = (args.addr, args.port)
+    if args.addr is not None:
+        addr = (args.addr, args.port)
+    else:
+        addr = (socket.gethostbyname(socket.gethostname()), args.port)
     node = ContactNode(name, addr)
 
     _logger.info("Starting main loop")

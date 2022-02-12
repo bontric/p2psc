@@ -84,7 +84,7 @@ class NodeZconf():
         try:
             # TODO: IPv6 ..
             node_addr = self.convert_str_to_addr(name_split[0])
-            if not ipaddress.IPv4Address(node_addr[0]).is_link_local and not ipaddress.IPv4Address(node_addr[0]).is_loopback:
+            if not ipaddress.IPv4Address(node_addr[0]).is_private:
                 logging.warning(
                     f"Received non link-local IPv4 address from peer: {node_addr[0]}")
         except Exception as e:
