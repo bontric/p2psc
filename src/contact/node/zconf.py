@@ -5,7 +5,6 @@ import logging
 import socket
 import ipaddress
 
-from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf, AsyncServiceBrowser
 
