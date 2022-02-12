@@ -10,6 +10,8 @@ from contact.node.peers.peer import Peer, PeerType
 from contact.node.registry import NodeRegistry
 from contact.node import proto
 
+ENABLE_TEST = True
+
 
 class ContactNode(Peer):
     def __init__(self, name, addr, enable_zeroconf=True) -> None:
@@ -21,98 +23,31 @@ class ContactNode(Peer):
         self._registry = NodeRegistry(self._addr, self, enable_zeroconf, timeout=20)
         self._loop_task = None
         self._loop = asyncio.get_event_loop()
+        self._client_paths = []
 
         self._map = {
             proto.PEER_INFO: self._handle_peer_info,
-            proto.TEST: self._handle_test,
             proto.ALL_NODE_INFO:  self._handle_all_node_info,
             proto.JOIN_GROUP:  self._handle_join_group,
             proto.LEAVE_GROUP:  self._handle_leave_group,
+            proto.CLEAR_GROUPS: self._handle_clear_groups,
             proto.ADD_PATH: self._handle_add_path,
             proto.DEL_PATH: self._handle_del_path,
+            proto.CLEAR_PATHS: self._handle_clear_paths,
         }
 
-    async def handle_message(self, peer: Peer, message: Union[OscMessage, OscBundle, Tuple[str, List[Any]]]):
-        if type(message) == tuple:
-            message = proto.osc_message(message[0], message[1])
-        elif type(message) == OscBundle:
-            raise NotImplementedError()
+        if ENABLE_TEST:
+            self._map[proto.TEST] = self._handle_test,
 
-        if proto.path_has_group(message.address):
-            h = self._map.get(proto.remove_group_from_path(message.address))        
-        else:
-            h = self._map.get(message.address)
-        
-        if h is not None:
-            await h(peer, message.address, message.params)
+    def to_osc_args(self, ptype: PeerType):
+        # merge all client paths
 
-    async def _handle_test(self, peer: Peer, path: str, osc_args: List[Any]):
-        print(f"Received TEST message from {peer._addr}: {path} {osc_args}")
-
-    async def _handle_join_group(self, peer: Peer, path: str, osc_args: List[Any]):
-        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
-            logging.warning(f"Received invalid joingroup from {peer._addr}")
-            return
-        logging.info(f"Received joingroup from {peer._addr}: {osc_args}")
-
-        if osc_args[0] not in self._groups:
-            self._groups.append(osc_args[0])
-        else:
-            logging.info(f"Already in group: {osc_args[0]}")
-
-    async def _handle_leave_group(self, peer: Peer, path: str, osc_args: List[Any]):
-        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
-            logging.warning(f"Received invalid joingroup from {peer._addr}")
-            return
-        logging.info(f"Received joingroup from {peer._addr}: {osc_args}")
-
-        if osc_args[0] not in self._groups:
-            logging.info(f"Not in group: {osc_args[0]}")
-        else:
-            self._groups.remove(osc_args[0])
-
-    async def _handle_add_path(self, peer: Peer, path: str, osc_args: List[Any]):
-        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
-            logging.warning(f"Received invalid addpath from {peer._addr}")
-            return
-        logging.info(f"Received addpath from {peer._addr}: {osc_args}")
-
-        if osc_args[0] not in self._paths:
-            self._paths.append(osc_args[0])
-
-        if osc_args[0] not in peer._paths:
-            peer._paths.append(osc_args[0])
-
-    async def _handle_del_path(self, peer: Peer, path: str, osc_args: List[Any]):
-        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
-            logging.warning(f"Received invalid leavegroup from {peer._addr}")
-            return
-        logging.info(f"Received leavegroup from {peer._addr}: {osc_args}")
-
-        if osc_args[0] in self._paths:
-            self._paths.remove(osc_args[0])
-
-        if osc_args[0] in peer._paths:
-            peer._paths.remove(osc_args[0])
-
-
-    async def _handle_all_node_info(self, peer: Peer, path: str, osc_args: List[Any]):
-        if len(osc_args) != 0 or peer._type != PeerType.localClient:
-            return
-
-        # TODO: Use bundle?
-        for p in self._registry.get_all(PeerType.localNode):
-            asyncio.ensure_future(peer.send((proto.PEER_INFO, p.to_osc_args())))
-
-        asyncio.ensure_future(peer.send((proto.PEER_INFO, self.to_osc_args())))
-
-    async def _handle_peer_info(self, peer: Peer, path: str, osc_args: List[Any]):
-        # NodeInfo request with 0 args is a request for our own peerinfo
-        if len(osc_args) != 0 or peer._type != PeerType.localClient:
-            return
-
-        logging.debug(f"Answering peerinfo request from {peer._addr}")
-        await peer.send((proto.PEER_INFO, self.to_osc_args()))
+        if ptype == PeerType.localClient:
+            paths = self._client_paths + list(self._map.keys())
+            groups = self._groups[:2] + [proto.LOCAL_NODE] + self._groups[2:]
+            return proto.peerinfo_args(self._type.value, self._addr, groups, paths)
+        elif ptype == PeerType.localNode:
+            return proto.peerinfo_args(self._type.value, self._addr, self._groups, self._client_paths)
 
     def stop(self):
         if not self._running:
@@ -145,4 +80,109 @@ class ContactNode(Peer):
                 break
 
             for p in self._registry.get_all(ptype=PeerType.localNode):
-                asyncio.ensure_future(p.send(proto.osc_message(proto.ALL_NODES_PEER_INFO, self.to_osc_args())))
+                asyncio.ensure_future(p.send(proto.osc_message(
+                    proto.ALL_NODES_PEER_INFO, self.to_osc_args(PeerType.localNode))))
+
+    async def handle_message(self, peer: Peer, message: Union[OscMessage, OscBundle, Tuple[str, List[Any]]]):
+        if type(message) == tuple:
+            message = proto.osc_message(message[0], message[1])
+        elif type(message) == OscBundle:
+            raise NotImplementedError()
+
+        if proto.path_has_group(message.address):
+            h = self._map.get(proto.remove_group_from_path(message.address))
+        else:
+            h = self._map.get(message.address)
+
+        if h is not None:
+            await h(peer, message.address, message.params)
+
+    async def _handle_peer_info(self, peer: Peer, path: str, osc_args: List[Any]):
+        # NodeInfo request with 0 args is a request for our own peerinfo
+        if len(osc_args) != 0 or peer._type != PeerType.localClient:
+            return
+
+        logging.debug(f"Answering peerinfo request from {peer._addr}")
+        await peer.send((proto.PEER_INFO, self.to_osc_args(PeerType.localClient)))
+
+    async def _handle_all_node_info(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 0 or peer._type != PeerType.localClient:
+            return
+
+        # TODO: Use bundle?
+        for p in self._registry.get_all(PeerType.localNode):
+            asyncio.ensure_future(
+                peer.send((proto.PEER_INFO, p.to_osc_args())))
+
+        asyncio.ensure_future(
+            peer.send((proto.PEER_INFO, self.to_osc_args(PeerType.localClient))))
+
+    async def _handle_test(self, peer: Peer, path: str, osc_args: List[Any]):
+        print(f"Received TEST message from {peer._addr}: {path} {osc_args}")
+
+    async def _handle_join_group(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid joingroup from {peer._addr}")
+            return
+        logging.info(f"Received joingroup from {peer._addr}: {osc_args}")
+
+        if osc_args[0] not in self._groups:
+            self._groups.append(osc_args[0])
+        else:
+            logging.info(f"Already in group: {osc_args[0]}")
+
+    async def _handle_leave_group(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid joingroup from {peer._addr}")
+            return
+        logging.info(f"Received joingroup from {peer._addr}: {osc_args}")
+
+        if osc_args[0] not in self._groups:
+            logging.info(f"Not in group: {osc_args[0]}")
+        else:
+            self._groups.remove(osc_args[0])
+
+    async def _handle_clear_groups(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid cleargroups from {peer._addr}")
+            return
+        logging.info(f"Received cleargroups from {peer._addr}: {osc_args}")
+
+        # Remove all groups but name and ALL
+        self._groups = self._groups[:2]
+
+    async def _handle_add_path(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid addpath from {peer._addr}")
+            return
+        logging.info(f"Received addpath from {peer._addr}: {osc_args}")
+
+        if osc_args[0] not in peer._paths:
+            peer._paths.append(osc_args[0])
+
+        # Update client paths: merge (sum((map(..)),[])) and remove duplicates (set())
+        self._client_paths = list(set(
+            sum(list(map(lambda x: x._paths, self._registry.get_all(PeerType.localClient))), [])))
+
+    async def _handle_del_path(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid delpath from {peer._addr}")
+            return
+        logging.info(f"Received delpath from {peer._addr}: {osc_args}")
+
+        if osc_args[0] in peer._paths:
+            peer._paths.remove(osc_args[0])
+
+        # Update client paths: merge (sum((map(..)),[])) and remove duplicates (set())
+        self._client_paths = list(set(
+            sum(list(map(lambda x: x._paths, self._registry.get_all(PeerType.localClient))), [])))
+
+    async def _handle_clear_paths(self, peer: Peer, path: str, osc_args: List[Any]):
+        if len(osc_args) != 0 or peer._type != PeerType.localClient:
+            logging.warning(f"Received invalid clearpaths from {peer._addr}")
+            return
+        logging.info(f"Received clearpaths from {peer._addr}: {osc_args}")
+        peer._paths = []
+        # Update client paths: merge (sum((map(..)),[])) and remove duplicates (set())
+        self._client_paths = list(set(
+            sum(list(map(lambda x: x._paths, self._registry.get_all(PeerType.localClient))), [])))

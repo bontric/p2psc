@@ -9,6 +9,7 @@ ZC_SERVICE_TYPE = "_cnosc._udp.local."
 
 # Groups
 ALL_NODES = "ALL"
+LOCAL_NODE = "LN"
 
 # Seperator for string lists
 STR_LIST_SEP = " "
@@ -18,10 +19,15 @@ PEER_INFO = "/peerinfo"  # Request/Send Node Info
 ALL_NODES_PEER_INFO  = "/" + ALL_NODES + "/" + PEER_INFO # peerinfo for all nodes
 ALL_NODE_INFO = "/allnodeinfo"
 TEST = "/test"  # print the message
-ADD_PATH = "/addpath"  # register a path
-DEL_PATH = "/delpath"  # unregister a path
 JOIN_GROUP = "/joingroup"  # join a group
 LEAVE_GROUP = "/leavegroup"  # leave a group
+CLEAR_GROUPS = "/cleargroups" # clear all groups (except name and ALL)
+ADD_PATH = "/addpath"  # register a path for this client
+DEL_PATH = "/delpath"  # unregister a path for this client
+CLEAR_PATHS = "/clearpaths" # remove all paths for this client
+ADD_CLIENT = "/addclient" # add client (IP, Port, paths)
+DEL_CLIENT = "/addclient" # delete client (IP, Port)
+RESET = "/reset" # reset all groups and paths
 
 # convenience functions for protocol
 
