@@ -23,7 +23,7 @@ def parse_args(args):
         default=''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)),
     )
     parser.add_argument(
-        "-ip",
+        "-a",
         "--address",
         dest="addr",
         help="Set Node ip",

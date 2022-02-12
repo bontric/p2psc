@@ -40,6 +40,22 @@ _logger = logging.getLogger(__name__)
 
 node = None
 
+def get_ip():
+    """ Hack to get the host's primary IP os-independently. 
+    See here for more info: https://stackoverflow.com/a/28950776
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        return None
+    finally:
+        s.close()
+    return IP
+
 __RUNNING = True
 def signal_handler(sig, frame):
     global node
@@ -58,9 +74,16 @@ async def main_loop(args):
     global node
     name = args.name.upper() # only allow upper case names
     if args.addr is not None:
-        addr = (args.addr, args.port)
+        addr = (args.addr.replace(" " , ""), args.port)
     else:
-        addr = (socket.gethostbyname(socket.gethostname()), args.port)
+        logging.warning("Trying to find this hosts primary IP address.. ")
+        ip = get_ip()
+        while ip is None:
+            logging.error("Unable to get local IP address, retrying..")
+            await asyncio.sleep(10)
+            ip = get_ip()
+        logging.warning(f"Using IP address: {ip}")
+        addr = (ip, args.port)
     node = ContactNode(name, addr)
 
     _logger.info("Starting main loop")
