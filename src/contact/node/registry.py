@@ -200,8 +200,8 @@ class NodeRegistry():
             logging.warning("Node already running!")
             return
 
-        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localNode), local_addr=self._addr)
-        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localClient), local_addr=(self._addr[0], self._addr[1]+1))
+        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localNode), local_addr=('0.0.0.0', self._addr[1]))
+        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localClient), local_addr=('0.0.0.0', self._addr[1]+1))
 
         if self._enable_zeroconf:
             await self._zconf.serve()
