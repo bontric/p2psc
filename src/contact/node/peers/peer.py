@@ -15,8 +15,7 @@ from contact.node import proto
 class PeerType(enum.Enum):
     localNode = 0
     localClient = 1
-    remoteClient = 2
-    remoteNode = 3
+    remoteNode = 2
 
 
 class Peer(abc.ABC):
@@ -24,7 +23,6 @@ class Peer(abc.ABC):
     Represents a generic peer in the network. These can be:
     + localNode:    Node on the same machine or local network
     + localClient:  Client on the same machine or local network
-    + remoteClient: Client connecting via the internet
     + remoteNode:   Node connecting via the internet
 
 
