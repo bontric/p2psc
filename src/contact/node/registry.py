@@ -13,10 +13,11 @@ from contact.node import proto
 from contact.node.peers.localClient import LocalClient
 from contact.node.peers.peer import Peer, PeerType
 from contact.node.peers.localNode import LocalNode
+from contact.node.peers.peerProtocols import OscHandler, OscProtocolUdp
 from contact.node.zconf import NodeZconf
 
 
-class NodeRegistry():
+class NodeRegistry(OscHandler):
 
     def __init__(self, addr: Tuple[str, int], my_node: Peer, enable_zeroconf=False, node_callback: Callable[[str, int], None] = None, timeout=30) -> None:
         self._peers = {}  # type: Dict[str, Peer]
@@ -63,6 +64,17 @@ class NodeRegistry():
 
         peer = LocalNode(self._ln_transport, addr)
         self.add_peer(peer)
+
+    def on_osc(self, addr: Tuple[str,int], ptype: PeerType, msg: OscMessage = None, bundle: OscBundle = None):
+        peer = self._peers.get(proto.hash(str(addr)))
+        if peer is None: 
+            peer = self.init_peer(addr, ptype)
+
+        if ptype == PeerType.localClient:
+            self._osc_from_localClient(peer, bundle, msg)
+        elif ptype == PeerType.localNode:
+            self._osc_from_localNode(peer, bundle, msg)
+
 
     def _osc_from_localClient(self, peer, bundle: OscBundle, message: OscMessage):
         if message is not None:
@@ -129,59 +141,6 @@ class NodeRegistry():
         peer._last_updateT = time.time()
         return
 
-    class _PeerConnectionUdp():
-        def __init__(self, registry: NodeRegistry, ptype: PeerType):
-            self._registry = registry
-            self._transport = None
-            self._ptype = ptype
-            self._peers = {str: Peer}
-
-        def datagram_received(self, dgram, addr):
-            """Called when a datagram is received from a newly connected peer."""
-
-            # Parse OSC message
-            try:
-                if OscBundle.dgram_is_bundle(dgram):
-                    bundle = OscBundle(dgram)
-                    msg = None
-                elif OscMessage.dgram_is_message(dgram):
-                    msg = OscMessage(dgram)
-                    bundle = None
-                else:
-                    raise  # Invalid message
-            except:
-                logging.warning(f"Received invalid OSC from {addr}")
-                return
-
-            peer = self._registry.get_peer(str(addr))
-
-            # TODO: simplify this maybe?
-
-            if self._ptype == PeerType.localClient:
-                if peer is None:
-                    peer = LocalClient(self._transport, addr)
-                    self._registry.add_peer(peer)
-                self._registry._osc_from_localClient(peer, bundle, msg)
-                return
-
-            elif self._ptype == PeerType.localNode:
-                if peer is None:
-                    peer = LocalNode(self._transport, addr)
-                    self._registry.add_peer(peer)
-                    logging.info(f"Client Connected from addr: {addr}")
-
-                self._registry._osc_from_localNode(peer, bundle, msg)
-
-        def connection_made(self, transport):
-            self._transport = transport
-
-        def connection_lost(self, exc):
-            pass
-
-        def error_received(self, exc):
-            logging.error(
-                f"The node connection for {self._ptype.name}s had an error: {str(exc)})")
-
     async def stop(self):
         if not self._running:
             return
@@ -200,8 +159,8 @@ class NodeRegistry():
             logging.warning("Node already running!")
             return
 
-        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localNode), local_addr=('0.0.0.0', self._addr[1]))
-        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: self._PeerConnectionUdp(self, PeerType.localClient), local_addr=('0.0.0.0', self._addr[1]+1))
+        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localNode), local_addr=('0.0.0.0', self._addr[1]))
+        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localClient), local_addr=('0.0.0.0', self._addr[1]+1))
 
         if self._enable_zeroconf:
             await self._zconf.serve()
@@ -230,14 +189,19 @@ class NodeRegistry():
                 return list(filter(lambda p: p._type == ptype, self._peers.values()))
 
         return list(self._peers.values())
-
-    def get_peer(self, addr: Tuple[str, int]) -> Peer:
-        return self._peers.get(proto.hash(addr))
-
+       
     def add_peer(self, peer: Peer):
         logging.info(
             f"Added {peer._type}: {peer._addr} {peer._groups} {list(peer._paths)}")
         self._peers[peer._hash] = peer
+    
+    def init_peer(self, addr, ptype):
+        if ptype == PeerType.localClient:
+            peer = LocalClient(self._lc_transport, addr)
+        elif ptype == PeerType.localNode:
+            peer = LocalNode(self._lc_transport, addr)
+        self.add_peer(peer)
+        return peer
 
     def remove_peer(self, peer: Peer):
         if peer._hash in self._peers:
