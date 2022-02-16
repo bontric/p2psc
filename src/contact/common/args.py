@@ -16,26 +16,18 @@ def parse_args(args):
     """
     parser = argparse.ArgumentParser(description="OSC Contact Node")
     parser.add_argument(
-        "-n",
-        "--name",
-        dest="name",
-        help="Set Node name",
-        default=''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)),
-    )
-    parser.add_argument(
-        "-a",
-        "--address",
-        dest="addr",
-        help="Set Node ip",
+        "-c",
+        "--config",
+        dest="config",
+        help="Set configuration file path",
         default=None,
     )
     parser.add_argument(
-        "-p",
-        "--port",
-        type=int,
-        dest="port",
-        help="Set Node port",
-        default="9139",
+        "-r",
+        "--remote",
+        dest="remotes",
+        help="Comma-seperated list of remote session strings to connect to",
+        default=None,
     )
     parser.add_argument(
         "--version",

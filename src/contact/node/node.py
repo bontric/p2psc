@@ -5,6 +5,7 @@ import logging
 
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
+from contact.common.config import ContactConfig
 
 from contact.node.peers.peer import Peer, PeerType
 from contact.node.registry import NodeRegistry
@@ -14,13 +15,21 @@ ENABLE_TEST = True
 
 
 class ContactNode(Peer):
-    def __init__(self, name, addr, enable_zeroconf=True) -> None:
-        self._local_client_addr = addr
-        super().__init__(addr, groups=[name, proto.ALL_NODES], paths=[proto.TEST])
+    def __init__(self, config: ContactConfig) -> None:
+        client_addr = (config["local_ip"], config["clients"]["port"])
+        local_nodes_addr = (config["local_ip"], config["local_nodes"]["port"])
+        if config["remote_host"]["enabled"]:
+            addr_remote = (config["remote_host"]["ip"], config["remote_host"]["port"])
+            key = config["remote_host"]["key"]
+        else:
+            addr_remote = key = None
+        super().__init__(local_nodes_addr, groups=[
+            config["name"], proto.ALL_NODES], paths=[proto.TEST])
         self._type = PeerType.localNode
 
-        self._update_interval = 3  # TODO: Make configurable
-        self._registry = NodeRegistry(self._addr, self, enable_zeroconf, timeout=20)
+        self._update_interval = config["update_interval"]  # TODO: Make configurable
+        self._registry = NodeRegistry(
+            self, client_addr, local_nodes_addr, addr_remote, key, config["zeroconf"], config["timeout"])
         self._loop_task = None
         self._loop = asyncio.get_event_loop()
         self._client_paths = []
@@ -41,7 +50,6 @@ class ContactNode(Peer):
 
     def to_osc_args(self, ptype: PeerType):
         # merge all client paths
-
         if ptype == PeerType.localClient:
             paths = self._client_paths + list(self._map.keys())
             groups = self._groups[:2] + [proto.LOCAL_NODE] + self._groups[2:]

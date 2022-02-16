@@ -13,31 +13,37 @@ from contact.node import proto
 from contact.node.peers.localClient import LocalClient
 from contact.node.peers.peer import Peer, PeerType
 from contact.node.peers.localNode import LocalNode
-from contact.node.peers.peerProtocols import OscHandler, OscProtocolUdp
+from contact.node.peers.peerProtocols import OscHandler, OscProtocolUdp, OscProtocolUdpEncrypted
+from contact.node.peers.remoteNode import RemoteNode
 from contact.node.zconf import NodeZconf
 
 
 class NodeRegistry(OscHandler):
 
-    def __init__(self, addr: Tuple[str, int], my_node: Peer, enable_zeroconf=False, node_callback: Callable[[str, int], None] = None, timeout=30) -> None:
+    def __init__(self, my_node: Peer, addr_clients: Tuple[str, int], addr_local_nodes: Tuple[str, int],  addr_remote=None, key=None, enable_zeroconf=False, timeout=30) -> None:
         self._peers = {}  # type: Dict[str, Peer]
         self._timeout = timeout
-        self._addr = addr
+        self._addr_clients = addr_clients
+        self._addr_local_nodes = addr_local_nodes
+        self._addr_remote = addr_remote
         self._running = False
         self._loop_task = None
         self._loop = asyncio.get_event_loop()
+        self._key = key
 
         # Transports for incoming connections
         self._ln_transport = None  # Local node transport
         self._ln_protocol = None
         self._lc_transport = None  # Local client transport
         self._lc_protocol = None
+        self._rn_transport = None  # Local client transport
+        self._rn_protocol = None
 
         # zeroconf
         self._enable_zeroconf = enable_zeroconf
         self._my_node = my_node  # type: Peer
         if enable_zeroconf:
-            self._zconf = NodeZconf(addr, self._zconf_node_callback)
+            self._zconf = NodeZconf(self._addr_local_nodes, self._zconf_node_callback)
 
     def _zconf_node_callback(self, addr: Union[Tuple[str, int], None], state: zeroconf.ServiceStateChange):
         h = proto.hash(addr)
@@ -62,19 +68,18 @@ class NodeRegistry(OscHandler):
 
         logging.info(f"DISCOVERED node at {addr}, connecting..")
 
-        peer = LocalNode(self._ln_transport, addr)
+        peer = LocalNode(self._ln_protocol, addr)
         self.add_peer(peer)
 
-    def on_osc(self, addr: Tuple[str,int], ptype: PeerType, msg: OscMessage = None, bundle: OscBundle = None):
+    def on_osc(self, addr: Tuple[str, int], ptype: PeerType, msg: OscMessage = None, bundle: OscBundle = None):
         peer = self._peers.get(proto.hash(str(addr)))
-        if peer is None: 
+        if peer is None:
             peer = self.init_peer(addr, ptype)
 
         if ptype == PeerType.localClient:
             self._osc_from_localClient(peer, bundle, msg)
         elif ptype == PeerType.localNode:
             self._osc_from_localNode(peer, bundle, msg)
-
 
     def _osc_from_localClient(self, peer, bundle: OscBundle, message: OscMessage):
         if message is not None:
@@ -85,7 +90,7 @@ class NodeRegistry(OscHandler):
 
                 # forward message to clients except for sending
                 for p in self.get_all(ptype=[PeerType.localClient, PeerType.remoteClient]):
-                    if p == peer: 
+                    if p == peer:
                         continue
                     asyncio.ensure_future(p.handle_message(peer, message))
             else:
@@ -94,7 +99,7 @@ class NodeRegistry(OscHandler):
 
                 # forward message to clients and nodes except for sending
                 for p in self.get_all():
-                    if p == peer: 
+                    if p == peer:
                         continue
                     asyncio.ensure_future(p.handle_message(peer, message))
         else:
@@ -150,6 +155,8 @@ class NodeRegistry(OscHandler):
 
         self._ln_transport.close()
         self._lc_transport.close()
+        if self._addr_remote is not None:
+            self._rn_transport.close()
 
         if self._enable_zeroconf:
             await self._zconf.stop()
@@ -159,8 +166,10 @@ class NodeRegistry(OscHandler):
             logging.warning("Node already running!")
             return
 
-        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localNode), local_addr=('0.0.0.0', self._addr[1]))
-        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localClient), local_addr=('0.0.0.0', self._addr[1]+1))
+        self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localNode), local_addr=('0.0.0.0', self._addr_local_nodes[1]))
+        self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localClient), local_addr=('0.0.0.0', self._addr_clients[1]))
+        if self._addr_remote is not None:
+            self._rn_transport, self._rn_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdpEncrypted(self, PeerType.remoteNode, self._key), local_addr=self._addr_remote)
 
         if self._enable_zeroconf:
             await self._zconf.serve()
@@ -181,6 +190,12 @@ class NodeRegistry(OscHandler):
     def check_exists(self, peer: Peer):
         return peer._hash in self._peers
 
+    async def connect_remote(self, addr, key):
+        pass  # TODO
+        # self._rn_transport, self._rn_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdpEncrypted(self, PeerType.remoteNode, key), remote_addr=addr)
+        #rN = RemoteNode(self._rn_protocol, addr)
+        # self.add_peer(rN)
+
     def get_all(self, ptype=None) -> List[Peer]:
         if ptype is not None:
             if type(ptype) == list:
@@ -189,17 +204,17 @@ class NodeRegistry(OscHandler):
                 return list(filter(lambda p: p._type == ptype, self._peers.values()))
 
         return list(self._peers.values())
-       
+
     def add_peer(self, peer: Peer):
         logging.info(
             f"Added {peer._type}: {peer._addr} {peer._groups} {list(peer._paths)}")
         self._peers[peer._hash] = peer
-    
+
     def init_peer(self, addr, ptype):
         if ptype == PeerType.localClient:
             peer = LocalClient(self._lc_transport, addr)
         elif ptype == PeerType.localNode:
-            peer = LocalNode(self._lc_transport, addr)
+            peer = LocalNode(self._ln_protocol, addr)
         self.add_peer(peer)
         return peer
 
