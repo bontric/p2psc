@@ -3,7 +3,7 @@
 import abc
 import asyncio
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 from Crypto.Cipher import AES
 
 from contact.node.peers.peer import Peer, PeerType
@@ -15,7 +15,7 @@ UDP_MAX_DATA = 65507
 
 
 class OscHandler():
-    def on_osc(self, addr: Tuple[str, int], ptype: PeerType, msg: OscMessage = None, bundle: OscBundle = None):
+    def on_osc(self, addr: Tuple[str, int], ptype: PeerType, message: Union[OscBundle, OscMessage]):
         raise NotImplementedError()
 
 
@@ -59,18 +59,16 @@ class OscProtocolUdp(PeerProtocol):
         # Parse OSC message
         try:
             if OscBundle.dgram_is_bundle(dgram):
-                bundle = OscBundle(dgram)
-                msg = None
+                msg = OscBundle(dgram)
             elif OscMessage.dgram_is_message(dgram):
                 msg = OscMessage(dgram)
-                bundle = None
             else:
                 raise  # Invalid message
         except:
             logging.warning(f"Received invalid OSC from {addr}")
             return
 
-        self._handler.on_osc(addr, self._ptype, msg, bundle)
+        self._handler.on_osc(addr, self._ptype, msg)
 
     def connection_made(self, transport):
         self._transport = transport
@@ -129,19 +127,17 @@ class OscProtocolUdpEncrypted(PeerProtocol):
 
         # Parse OSC message
         try:
-            if OscBundle.dgram_is_bundle(data):
-                bundle = OscBundle(data)
-                msg = None
-            elif OscMessage.dgram_is_message(data):
+            if OscMessage.dgram_is_message(data):
+                msg = OscBundle(data)
+            elif OscBundle.dgram_is_bundle(data):
                 msg = OscMessage(data)
-                bundle = None
             else:
                 raise  # Invalid message
         except:
             logging.warning(f"Received invalid OSC from {addr}")
             return
 
-        self._handler.on_osc(addr, self._ptype, msg, bundle)
+        self._handler.on_osc(addr, self._ptype, msg)
 
     def connection_made(self, transport: asyncio.DatagramTransport):
         self._transport = transport
