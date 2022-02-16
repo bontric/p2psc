@@ -46,7 +46,7 @@ class ContactNode(Peer):
         }
 
         if ENABLE_TEST:
-            self._map[proto.TEST] = self._handle_test,
+            self._map[proto.TEST] = self._handle_test
 
     def to_osc_args(self, ptype: PeerType):
         # merge all client paths
