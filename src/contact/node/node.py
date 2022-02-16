@@ -51,7 +51,7 @@ class ContactNode(Peer):
     def to_osc_args(self, ptype: PeerType):
         # merge all client paths
         if ptype == PeerType.localClient:
-            paths = self._client_paths + list(self._map.keys())
+            paths = self._client_paths
             groups = self._groups[:2] + [proto.LOCAL_NODE] + self._groups[2:]
             return proto.peerinfo_args(self._type.value, self._addr, groups, paths)
         elif ptype == PeerType.localNode:
