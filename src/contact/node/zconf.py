@@ -33,15 +33,15 @@ class NodeZconf():
     def convert_addr_to_str(addr: Tuple[str, int]):
         ip = socket.inet_aton(addr[0]).hex()
         port = addr[1].to_bytes(2, 'little').hex()
-        return ip+"_"+port
+        return ip+port
 
     @staticmethod
     def convert_str_to_addr(addr_str: str):
-        split = addr_str.split("_")
-        if len(split) != 2:
+        if len(addr_str) != 12:
             raise ArgumentError(f"Unable to convert IP/port combination: {addr_str}")
-        split = [bytes.fromhex(split[0]), bytes.fromhex(split[1])]
-        return (socket.inet_ntoa(split[0]), int.from_bytes(split[1], 'little'))
+        ip =  bytes.fromhex(addr_str[:8])
+        port =  bytes.fromhex(addr_str[8:])
+        return (socket.inet_ntoa(ip), int.from_bytes(port, 'little'))
 
     async def stop(self):
         if not self._running or self._serve_task is None:
