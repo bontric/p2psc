@@ -71,31 +71,31 @@ class NodeRegistry(OscHandler):
         peer = LocalNode(self._ln_protocol, addr)
         self.add_peer(peer)
 
-    def on_osc(self, addr: Tuple[str, int], ptype: PeerType, msg: OscMessage = None, bundle: OscBundle = None):
+    def on_osc(self, addr: Tuple[str, int], ptype: PeerType, message: Union[OscBundle, OscMessage]):
         peer = self._peers.get(proto.hash(str(addr)))
         if peer is None:
             peer = self.init_peer(addr, ptype)
 
         if ptype == PeerType.localClient:
-            self._osc_from_localClient(peer, bundle, msg)
+            self._osc_from_localClient(peer, message)
         elif ptype == PeerType.localNode:
-            self._osc_from_localNode(peer, bundle, msg)
+            self._osc_from_localNode(peer, message)
 
-    def _osc_from_localClient(self, peer, bundle: OscBundle, message: OscMessage):
-        if message is not None:
+    def _osc_from_localClient(self, peer:LocalClient, message: Union[OscBundle, OscMessage]):
+        if type(message) == OscMessage:
             # Message with no group is ONLY handled locally and forwarded to clients (if they subscribe)
             if not proto.path_has_group(message.address):
-                # handle message locally
-                asyncio.ensure_future(self._my_node.handle_message(peer, message))
-
                 # forward message to clients except for sending
-                for p in self.get_all(ptype=[PeerType.localClient, PeerType.remoteClient]):
+                for p in self.get_all(ptype=[PeerType.localClient]):
                     if p == peer:
                         continue
                     asyncio.ensure_future(p.handle_message(peer, message))
             else:
                 # handle message locally
                 asyncio.ensure_future(self._my_node.handle_message(peer, message))
+
+                if proto.get_group_from_path(message.address) == proto.LOCAL_NODE:
+                    return # no need to handle messsages elsewhere
 
                 # forward message to clients and nodes except for sending
                 for p in self.get_all():
@@ -107,8 +107,8 @@ class NodeRegistry(OscHandler):
             # TODO: HANDLE BUNDLE
             # TODO: handle other messages from peer!
 
-    def _osc_from_localNode(self, peer: Peer, bundle: OscBundle, message: OscMessage):
-        if message is not None:
+    def _osc_from_localNode(self, peer: LocalNode, message: Union[OscBundle, OscMessage]):
+        if type(message) == OscMessage:
             # Handle ALL_NODES PEER_INFO here because only the registry needs to know
             if message.address == proto.ALL_NODES_PEER_INFO:
                 self.__handle_peerinfo(peer, message)
@@ -168,6 +168,7 @@ class NodeRegistry(OscHandler):
 
         self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localNode), local_addr=('0.0.0.0', self._addr_local_nodes[1]))
         self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localClient), local_addr=('0.0.0.0', self._addr_clients[1]))
+        print(f"Listening for clients on: {self._addr_clients}")
         if self._addr_remote is not None:
             self._rn_transport, self._rn_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdpEncrypted(self, PeerType.remoteNode, self._key), local_addr=self._addr_remote)
 
