@@ -31,16 +31,21 @@ class LocalClient(Peer):
 
         # If path contains group, check if client explicitly subscribes this
         p = self.subscribed_path(message.address, is_local=True)
-
-        # if not, remove group and try again
-        if p is None:
-            p = self.subscribed_path(proto.remove_group_from_path(
-                message.address), is_local=True)
-
         if p is not None:
             logging.debug(
-                f"Sending to localClient {self._addr}: {message.address} {message.params}")
+                f"Sending to localClient {self._addr}: {p} {message.params}")
             self._transport.sendto(message.dgram, self._addr)
+
+        # if not, remove group and try again
+        p = self.subscribed_path(proto.remove_group_from_path(
+            message.address), is_local=True)
+
+        if p is not None:
+            # remove group from path when sending to client
+            dgram = proto.osc_dgram(p, message.params)
+            logging.debug(
+                f"Sending to localClient {self._addr}: {p} {message.params}")
+            self._transport.sendto(dgram, self._addr)
 
     async def send(self, message: Union[OscMessage, OscBundle, Tuple[str, List[Any]]]):
         if self._transport.is_closing():
