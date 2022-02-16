@@ -9,7 +9,7 @@ ZC_SERVICE_TYPE = "_cnosc._udp.local."
 
 # Groups
 ALL_NODES = "ALL"
-LOCAL_NODE = "LN"
+LOCAL_NODE = "N"
 
 # Seperator for string lists
 STR_LIST_SEP = " "
