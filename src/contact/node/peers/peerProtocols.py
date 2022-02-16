@@ -83,7 +83,10 @@ class OscProtocolUdp(PeerProtocol):
         self._transport.sendto(data, addr)
 
     def connection_lost(self, exc):
-        pass
+        logging.info(f"Connection lost: {self._ptype.name}")
+
+    def is_closing(self):
+        return self._transport.is_closing()
 class OscProtocolUdpEncrypted(PeerProtocol):
     def __init__(self, handler: OscHandler, ptype: PeerType, key: bytes):
         self._handler = handler
