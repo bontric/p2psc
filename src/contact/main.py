@@ -103,7 +103,7 @@ async def main_loop(args):
 
     name = config["name"]
     if config["local_ip"] is None:
-        logging.warning("Trying to find this hosts primary IP address.. ")
+        logging.info("Trying to find this hosts primary IP address.. ")
         config["local_ip"] = get_ip()
         i = 0
         while config["local_ip"] is None:
@@ -114,7 +114,7 @@ async def main_loop(args):
             if i == 10:
                 logging.error("Unable to get local IP address")
                 return
-        logging.warning(f"Using IP address: {config['local_ip']}")
+        logging.info(f"Using IP address: {config['local_ip']}")
 
     if config["remote_host"]["enabled"]:
         # Setting a "session" in config is a hidden option for testing
@@ -123,9 +123,9 @@ async def main_loop(args):
                 logging.error("Remote IP must be set if remote_host is enabled")
                 return
             gaddr = (config['remote_host']['ip'], config['remote_host']['port'])
-            print(f"Generating Session for connections on {gaddr}")
+            logging.info(f"Generating Session for connections on {gaddr}")
             session, key = make_session(gaddr)
-            print(f"Session String: {session}")
+            logging.info(f"Session String: {session}")
         else:
             logging.warning(
                 f"UNSAFE: Reusing Session: {config['remote_host']['session']}")
@@ -138,13 +138,13 @@ async def main_loop(args):
 
     for s in config["remote_nodes"]["sessions"]:
         addr, key = parse_session(s)
-        print(f"Connecting to remote Node {addr} using key {key}")
+        logging.info(f"Connecting to remote Node {addr} using key {key}")
         await node._registry.connect_remote(addr, key)
 
     if args.remotes is not None:
         for s in args.remotes.split(','):
             addr, key = parse_session(s)
-            print(f"Connecting to remote Node {addr} using key {key}")
+            logging.info(f"Connecting to remote Node {addr} using key {key}")
             await node._registry.connect_remote(addr, key)
 
     _logger.info("Starting main loop")
