@@ -1,4 +1,5 @@
 import json
+import logging
 import os.path
 import random
 import string
@@ -47,7 +48,7 @@ class ContactConfig():
         else:
             self.__makeDefault()
             self.save(path)
-            print(f"Created default config file at {path}")
+            logging.info(f"Created default config file at {path}")
 
     def __getitem__(self, key):
         return self.__configDict[key]
