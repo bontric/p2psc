@@ -16,8 +16,9 @@ STR_LIST_SEP = " "
 
 # Node commands
 PEER_INFO = "/peerinfo"  # Request/Send Node Info
-ALL_NODES_PEER_INFO  = "/" + ALL_NODES + "/" + PEER_INFO # peerinfo for all nodes
-ALL_NODE_INFO = "/allnodeinfo"
+ALL_NODES_PEER_INFO  = "/" + ALL_NODES + "/" + PEER_INFO # peerinfo for all nodes (macro for sending)
+NODE_INFO = "/nodeinfo"  # Client request local Node's peer Info
+ALL_NODE_INFO = "/allnodeinfo" # Client requests peerinfo for all nodes except local node
 TEST = "/test"  # print the message
 JOIN_GROUP = "/joingroup"  # join a group
 LEAVE_GROUP = "/leavegroup"  # leave a group
