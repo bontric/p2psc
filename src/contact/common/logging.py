@@ -9,7 +9,10 @@ def setup_logging(loglevel):
     Args:
       loglevel (int): minimum loglevel for emitting messages
     """
-    logformat = "[%(asctime)s] %(levelname)s:%(name)s:%(message)s"
+    if loglevel == logging.DEBUG:
+      logformat = "[%(asctime)s] %(levelname)s: %(name)s:%(message)s"
+    else:
+      logformat = "[%(asctime)s] (%(levelname)s) %(message)s"
     logging.basicConfig(
         level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S"
     )
