@@ -141,7 +141,7 @@ class ContactNode(Peer):
 
     async def _handle_leave_group(self, peer: Peer, path: str, osc_args: List[Any]):
         if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
-            logging.warning(f"Received invalid joingroup from {peer._addr}")
+            logging.warning(f"Received invalid leavegroup from {peer._addr}")
             return
         logging.info(f"Received joingroup from {peer._addr}: {osc_args}")
 
