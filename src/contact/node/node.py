@@ -126,7 +126,7 @@ class ContactNode(Peer):
             peer.send((proto.PEER_INFO, self.to_osc_args(PeerType.localClient))))
 
     async def _handle_test(self, peer: Peer, path: str, osc_args: List[Any]):
-        print(f"Received TEST message from {peer._addr}: {path} {osc_args}")
+        logging.info(f"Received TEST message from {peer._addr}: {osc_args}")
 
     async def _handle_join_group(self, peer: Peer, path: str, osc_args: List[Any]):
         if len(osc_args) != 1 or type(osc_args[0]) != str or peer._type != PeerType.localClient:
