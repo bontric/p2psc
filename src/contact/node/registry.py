@@ -108,7 +108,6 @@ class NodeRegistry(OscHandler):
         else:
             logging.error("OSC Bundle messages are not supported yet!")
             # TODO: HANDLE BUNDLE
-            # TODO: handle other messages from peer!
 
     def _osc_from_localNode(self, peer: LocalNode, message: Union[OscBundle, OscMessage]):
         if type(message) == OscMessage:
@@ -134,7 +133,6 @@ class NodeRegistry(OscHandler):
         else:
             logging.error("OSC Bundle messages are not supported yet!")
             # TODO: HANDLE BUNDLE
-            # TODO: handle other messages from peer!
 
     def __handle_peerinfo(self, peer: Peer, message: OscMessage):
         if not Peer.is_valid_peerinfo(message.params):
