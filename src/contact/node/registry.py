@@ -17,6 +17,8 @@ from contact.node.peers.peerProtocols import OscHandler, OscProtocolUdp, OscProt
 from contact.node.peers.remoteNode import RemoteNode
 from contact.node.zconf import NodeZconf
 
+# Print received peerinfos -- only needed when debugging peerinfo stability
+ENABLE_PEERINFO_LOGGING = False
 
 class NodeRegistry(OscHandler):
 
@@ -83,6 +85,7 @@ class NodeRegistry(OscHandler):
 
     def _osc_from_localClient(self, peer:LocalClient, message: Union[OscBundle, OscMessage]):
         if type(message) == OscMessage:
+            logging.debug(f"Received OSC from {peer._addr}: {message.address}, {message.params}")
             # Message with no group is ONLY handled locally and forwarded to clients (if they subscribe)
             if not proto.path_has_group(message.address):
                 # forward message to clients except for sending
@@ -138,8 +141,9 @@ class NodeRegistry(OscHandler):
             logging.warning(
                 "Received invalid PEERINFO from {peer._addr}: {message.params}")
             return
-        logging.debug(
-            f"Received PEERINFO from {peer._addr}: {message.params}")
+        if ENABLE_PEERINFO_LOGGING:
+            logging.debug(
+                f"Received PEERINFO from {peer._addr}: {message.params}")
 
         peer.update_groups(message.params[3])
         peer.update_paths(message.params[4])
@@ -168,7 +172,7 @@ class NodeRegistry(OscHandler):
 
         self._ln_transport, self._ln_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localNode), local_addr=('0.0.0.0', self._addr_local_nodes[1]))
         self._lc_transport, self._lc_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdp(self, PeerType.localClient), local_addr=('0.0.0.0', self._addr_clients[1]))
-        print(f"Listening for clients on: {self._addr_clients}")
+        logging.info(f"Listening for clients on: {self._addr_clients}")
         if self._addr_remote is not None:
             self._rn_transport, self._rn_protocol = await self._loop.create_datagram_endpoint(lambda: OscProtocolUdpEncrypted(self, PeerType.remoteNode, self._key), local_addr=self._addr_remote)
 
