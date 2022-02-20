@@ -97,7 +97,7 @@ ContactOsc {
 	}
 
 	delpath { | path, function |
-		OSCdef.newMatching(path, function, path, address);
+		OSCdef(path).free;
 		Task {
 			address.sendMsg("/N//delpath", path);
 			this.update(1,1);
