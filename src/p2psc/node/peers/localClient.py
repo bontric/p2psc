@@ -5,9 +5,9 @@ from asyncio import DatagramTransport
 
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
-from contact.node import proto
+from p2psc.node import proto
 
-from contact.node.peers.peer import Peer, PeerType
+from p2psc.node.peers.peer import Peer, PeerType
 
 
 class LocalClient(Peer):

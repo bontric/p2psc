@@ -2,7 +2,7 @@ import logging
 import argparse
 import random
 import string
-from contact import __version__
+from p2psc import __version__
 
 def parse_args(args):
     """Parse command line parameters
@@ -14,7 +14,7 @@ def parse_args(args):
     Returns:
       :obj:`argparse.Namespace`: command line parameters namespace
     """
-    parser = argparse.ArgumentParser(description="OSC Contact Node")
+    parser = argparse.ArgumentParser(description="OSC p2psc Node")
     parser.add_argument(
         "-c",
         "--config",
@@ -32,7 +32,7 @@ def parse_args(args):
     parser.add_argument(
         "--version",
         action="version",
-        version="Contact {ver}".format(ver=__version__),
+        version="p2psc {ver}".format(ver=__version__),
     )
     parser.add_argument(
         "-v",

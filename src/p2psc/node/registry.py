@@ -9,13 +9,13 @@ import time
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
 
-from contact.node import proto
-from contact.node.peers.localClient import LocalClient
-from contact.node.peers.peer import Peer, PeerType
-from contact.node.peers.localNode import LocalNode
-from contact.node.peers.peerProtocols import OscHandler, OscProtocolUdp, OscProtocolUdpEncrypted
-from contact.node.peers.remoteNode import RemoteNode
-from contact.node.zconf import NodeZconf
+from p2psc.node import proto
+from p2psc.node.peers.localClient import LocalClient
+from p2psc.node.peers.peer import Peer, PeerType
+from p2psc.node.peers.localNode import LocalNode
+from p2psc.node.peers.peerProtocols import OscHandler, OscProtocolUdp, OscProtocolUdpEncrypted
+from p2psc.node.peers.remoteNode import RemoteNode
+from p2psc.node.zconf import NodeZconf
 
 # Print received peerinfos -- only needed when debugging peerinfo stability
 ENABLE_PEERINFO_LOGGING = False

@@ -5,17 +5,17 @@ import logging
 
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
-from contact.common.config import ContactConfig
+from p2psc.common.config import Config
 
-from contact.node.peers.peer import Peer, PeerType
-from contact.node.registry import NodeRegistry
-from contact.node import proto
+from p2psc.node.peers.peer import Peer, PeerType
+from p2psc.node.registry import NodeRegistry
+from p2psc.node import proto
 
 ENABLE_TEST = True
 
 
-class ContactNode(Peer):
-    def __init__(self, config: ContactConfig) -> None:
+class Node(Peer):
+    def __init__(self, config: Config) -> None:
         client_addr = (config["local_ip"], config["clients"]["port"])
         local_nodes_addr = (config["local_ip"], config["local_nodes"]["port"])
         if config["remote_host"]["enabled"]:

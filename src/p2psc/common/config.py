@@ -5,9 +5,9 @@ import random
 import string
 
 # this only workson NIX.. fix it
-DEFAULT_PATH = os.path.expanduser('~') + "/.osccontact.conf"
+DEFAULT_PATH = os.path.expanduser('~') + "/.oscp2psc.conf"
 
-class ContactConfig():
+class Config():
     def __init__(self, path=None):
         self.__configDict = None
         if path is None:

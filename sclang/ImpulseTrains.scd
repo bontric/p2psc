@@ -8,7 +8,7 @@
 (
 ~node.sendg("ALL", "/scl/interpret", "
 ~packet = 5000.do{|i| n = \"a\" ++ n};
-a = {|freq, t_gate| LeakDC.ar(EnvGen.ar(Env.perc(0.001, 0.001, curve:-12), t_gate))}.play;
+a = {|freq, t_gate| 0.1*LeakDC.ar(EnvGen.ar(Env.perc(0.0001, 0.0001, curve:-12), t_gate))}.play;
 ~node.addpath(\"/ping\", {|msg|
 a.set(\\t_gate, 1); // freq does not matter here
 ~node.sendg([\"ALL\"].choose , \"/ping\", ~packet);
@@ -26,6 +26,6 @@ msg[1].rand.do{|i| ~packet = \"a\" ++ ~packet};
 
 ~node.sendg("ALL", "/scl/interpret", "OSCdef(\"/ping\").free")
 
-~node.sendg("ALL", "/ping", 200)
+~node.sendg("ALL", "/ping")
 
-~node.sendg("ALL", "/plen", 40000)
+~node.sendg("ALL", "/plen", 30000)

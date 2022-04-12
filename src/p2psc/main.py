@@ -4,7 +4,7 @@ console script. To run this script uncomment the following lines in the
 ``[options.entry_points]`` section in ``setup.cfg``::
 
     console_scripts =
-         fibonacci = contact.skeleton:run
+         fibonacci = p2psc.skeleton:run
 
 Then run ``pip install .`` (or ``pip install -e .`` for editable mode)
 which will install the command ``fibonacci`` inside your current environment.
@@ -30,13 +30,13 @@ import sys
 from typing import Any, List, Tuple
 import secrets
 
-from contact import __version__
-from contact.common.args import parse_args
-from contact.common.config import ContactConfig
-from contact.common.logging import setup_logging
-from contact.node.node import ContactNode
-from contact.node.peers.remoteNode import RemoteNode
-from contact.node.zconf import NodeZconf
+from p2psc import __version__
+from p2psc.common.args import parse_args
+from p2psc.common.config import Config
+from p2psc.common.logging import setup_logging
+from p2psc.node.node import Node
+from p2psc.node.peers.remoteNode import RemoteNode
+from p2psc.node.zconf import NodeZconf
 
 __author__ = "Benedikt Wieder"
 __copyright__ = "Benedikt Wieder"
@@ -99,7 +99,7 @@ def main(args):
 
 async def main_loop(args):
     global node
-    config = ContactConfig(args.config)
+    config = Config(args.config)
 
     name = config["name"]
     if config["local_ip"] is None:
@@ -134,7 +134,7 @@ async def main_loop(args):
             config['remote_host']['port'] = raddr[1]
         config['remote_host']['key'] = key
 
-    node = ContactNode(config)
+    node = Node(config)
 
     for s in config["remote_nodes"]["sessions"]:
         addr, key = parse_session(s)

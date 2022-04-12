@@ -1,5 +1,5 @@
 """
-    Setup file for Contact.
+    Setup file for p2psc.
     Use setup.cfg to configure your project.
 
     This file was generated with PyScaffold 4.0.2.

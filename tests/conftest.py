@@ -1,5 +1,5 @@
 """
-    Dummy conftest.py for contact.
+    Dummy conftest.py for p2psc.
 
     If you don't know what this is for, just leave it empty.
     Read more about conftest.py under:

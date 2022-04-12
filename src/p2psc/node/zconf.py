@@ -8,7 +8,7 @@ import ipaddress
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf, AsyncServiceBrowser
 
-from contact.node import proto
+from p2psc.node import proto
 
 ZEROCONF_TTL = 10
 ZEROCONF_UPDATE_INTERVAL = 15

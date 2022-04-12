@@ -1,4 +1,4 @@
-ContactOsc {
+p2pscOsc {
 	var <>address;
 	var <>nodeinfoUpdated;
 	var nodeinfoReceived;
@@ -36,13 +36,13 @@ ContactOsc {
 			tries.do { |i|
 				this.sendn("/nodeinfo");
 				nodeinfoReceived.hang(interval);
-				nodeinfoReceived.test = false;
-				if(groups != [],
+				if(nodeinfoReceived.test,
 					{
+						nodeinfoReceived.test = false;
 						nodeinfoUpdated.test = true;
 						nodeinfoUpdated.signal;
-						"Contact node updated".postln;
-						task.stop
+						"p2psc node updated".postln;
+						task.stop;
 
 					},
 					{if( (i + 1) == tries, {"Error: Failed to update".postln}, {"Retrying..".postln})}
@@ -52,11 +52,11 @@ ContactOsc {
 		}.play;
 	}
 
-	send { | path, args=nil | if(args == nil, {address.sendMsg(path)} , {address.sendMsg(path, args) })}
+	send { | path...args | address.sendMsg(path, *args)}
 
-	sendg { | group, path, args=nil | this.send("/" ++ group ++ "/" ++ path, args) }
+	sendg { | group, path...args | this.send("/" ++ group ++ "/" ++ path, *args) }
 
-	sendn { | path, args=nil | this.send("/N/" ++ path, args) }
+	sendn { | path...args | this.send("/N/" ++ path, *args) }
 
 	joingroup { | group |
 		Task {
@@ -112,3 +112,4 @@ ContactOsc {
 
 	clearpaths {address.sendMsg("/N//clearpaths");this.update(1,1);}
 }
+

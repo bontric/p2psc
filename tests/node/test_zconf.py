@@ -1,5 +1,5 @@
 import pytest 
-from contact.node.zconf import NodeZconf
+from p2psc.node.zconf import NodeZconf
 
 
 def test_conversion():

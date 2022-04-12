@@ -9,7 +9,7 @@ from typing import *
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
 
-from contact.node import proto
+from p2psc.node import proto
 
 
 class PeerType(enum.Enum):

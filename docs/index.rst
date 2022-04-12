@@ -1,8 +1,8 @@
 =======
-Contact
+p2psc
 =======
 
-This is the documentation of **Contact**.
+This is the documentation of **p2psc**.
 
 .. note::
 
