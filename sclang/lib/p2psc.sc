@@ -1,4 +1,4 @@
-p2pscOsc {
+P2psc {
 	var <>address;
 	var <>nodeinfoUpdated;
 	var nodeinfoReceived;
