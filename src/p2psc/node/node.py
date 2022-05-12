@@ -64,6 +64,9 @@ class Node(Peer):
         self._running = False
         self._loop_task.cancel()
 
+    def get_async_loop(self):
+        return self.__loop
+
     async def serve(self):
         if self._loop_task is not None:
             logging.warning("Node already running!")

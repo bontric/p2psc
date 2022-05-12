@@ -10,15 +10,16 @@ from p2psc.node.plugins.plugin import P2PSCPlugin
 
 
 
-class Jacktrip(P2PSCPlugin):
-    def __init__(self) -> None:
+class JacktripPlugin(P2PSCPlugin):
+    def __init__(self, node: Node) -> None:
         super().__init__()
-    
-    def getName() -> str:
+
+    def getName(self) -> str:
         return "P2PSC JackTrip autoconnect"
 
-    def getPaths() -> List[str]:
+    def getPaths(self) -> List[str]:
         return ["jacktrip/*"]
 
     def handle_message(self, peer: Peer, message: Union[OscMessage, OscBundle]):
+        print("Jacktrip  plugin received message: {}".format(message))
         pass

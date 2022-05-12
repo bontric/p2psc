@@ -8,24 +8,26 @@ from pythonosc.osc_bundle import OscBundle
 
 
 class P2PSCPlugin(abc.ABC):
-    def getName() -> str:
+    def __init__(self, node: Node):
+        raise NotImplementedError()
+
+    def getName(self) -> str:
         """ Returns the Name of this Plugin """
         raise NotImplementedError()
 
-    def setNode(node: Node):
-        """ Called during initialization, passing the p2psc Node """
-        raise NotImplementedError()
-
-    def getPaths() -> List[str]:
+    def getPaths(self) -> List[str]:
         """ Return Paths which this plugin subscribes """
+        raise NotImplementedError()
 
     async def handle_message(self, peer: Peer, message: Union[OscMessage, OscBundle]):
         """ Handle an incoming message matching one of the paths returned by getPaths() """
-        pass
+        raise NotImplementedError()
 
     async def handle_peer_update(self, peerInfos: List[Any]):
-        pass
+        raise NotImplementedError()
 
+    def shutdown(self):
+        raise NotImplementedError()
 
 
 
