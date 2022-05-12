@@ -14,5 +14,5 @@ def setup_logging(loglevel):
     else:
       logformat = "[%(asctime)s] (%(levelname)s) %(message)s"
     logging.basicConfig(
-        level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S"
+        level=loglevel, stream=sys.stdout, format=logformat, datefmt="%H:%M:%S"
     )
