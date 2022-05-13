@@ -31,7 +31,7 @@ class PeerRegistry:
             groups.extend(pi.groups)
         if proto.ALL_NODES not in groups:
             groups.append("ALL")
-        return groups
+        return set(groups)
 
     def get_by_type(self, t: PeerType) -> List[PeerInfo]:
         """
