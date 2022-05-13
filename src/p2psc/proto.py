@@ -1,7 +1,6 @@
 from argparse import ArgumentError
 import hashlib
 from typing import *
-from matplotlib.pyplot import disconnect
 
 from pythonosc.osc_message_builder import OscMessageBuilder
 
