@@ -50,15 +50,18 @@ class Node(OscHandler):
         self._running = True
         while self._running:
             try:
-                await asyncio.sleep(3) # TODO: Make configurable
+                await asyncio.sleep(3)
             except asyncio.CancelledError:
                 self._running = False
                 if self._enable_zeroconf:
                     await self._zconf.stop()
                 break
             self._registry.cleanup()
-            for pi in self._registry.get_by_type(PeerType.node):
-                asyncio.ensure_future(self._update_peer(pi))
+            info = self._get_peerinfo_msg()
+            
+            # TODO: Only update peerinfos on change // implement ACK for peerinfo
+            for pi in self._registry.get_by_type(PeerType.node):  
+                self._transport.sendto(info, pi.addr)
 
     def stop(self):
         """
@@ -70,18 +73,12 @@ class Node(OscHandler):
         self._running = False
         self._loop_task.cancel()
         self._transport.close()
-
-
-    async def _update_peer(self, pi: PeerInfo):
-        """
-        Send all information about this node to given peer
-        """
+    
+    def _get_peerinfo_msg(self):
         paths = self._registry.get_local_paths()
         groups = self._registry.get_local_groups()
         data = PeerInfo(self._addr, groups, paths, PeerType.node).as_osc()
-
-        if not self._transport.is_closing():
-            self._transport.sendto(proto.osc_dgram(proto.PEERINFO_PATH, data), pi.addr)
+        return proto.osc_dgram(proto.PEERINFO, data)
 
     def _zconf_node_callback(self, addr: Union[Tuple[str, int], None], state: zeroconf.ServiceStateChange):
         """
@@ -144,7 +141,6 @@ class Node(OscHandler):
                 logging.warning(f"Received invalid peerinfo from {addr}: {message.params}")
                 return
             self._registry.add_peer(PeerInfo.from_osc(addr, message.params))
-
         elif message.address == proto.ALL_PEERINFO:
             for pi in self._registry.get_by_type(PeerType.node):
                 self._transport.sendto(proto.osc_dgram(proto.PEERINFO, pi.as_osc()), addr)
