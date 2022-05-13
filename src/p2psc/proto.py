@@ -13,16 +13,16 @@ LOCAL_NODE = "N"
 STR_LIST_SEP = " "
 
 # Node commands
-P2PSC_PREFIX = "/p2psc"
+P2PSC_PREFIX = "p2psc"
 
 # request peerinfo
-PEERINFO_PATH = P2PSC_PREFIX + "/peerinfo"
+PEERINFO = '/'+P2PSC_PREFIX + "/peerinfo"
 
 # request peerinfo for all nodes except local node
-ALL_NODE_INFO = P2PSC_PREFIX + "/allnodeinfo"
+ALL_PEERINFO = '/'+P2PSC_PREFIX + "/allpeerinfo"
 
 # disconnect from node
-DISCONNECT = P2PSC_PREFIX + "/disconnect"
+DISCONNECT = '/'+P2PSC_PREFIX + "/disconnect"
 
 
 def osc_message(path, args):

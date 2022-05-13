@@ -111,8 +111,8 @@ class Node(OscHandler):
             return
 
         # Peerinfo messages are handled locally
-        if message.address == proto.PEERINFO_PATH:
-            self._handle_peerinfo(addr, message)
+        if proto.get_group_from_path(message.address) == proto.P2PSC_PREFIX:
+            self._handle_local(addr, message)
             return 
         
         # All other messages are forwarded to clients/nodes depending on sender
@@ -134,9 +134,22 @@ class Node(OscHandler):
             for pi in self._registry.get_by_path(message.address): 
                 self._transport.sendto(m, pi.addr)
 
-    def _handle_peerinfo(self, addr, message: OscMessage):
-        if not proto.is_valid_peerinfo(message.params):
-            logging.warning(f"Received invalid peerinfo from {addr}: {message.params}")
-            return
-        
-        self._registry.add_peer(PeerInfo.from_osc(addr, message.params))
+    def _handle_local(self, addr, message: OscMessage):
+        if message.address == proto.PEERINFO:
+            if len(message.params) == 0:
+                logging.debug(f"Peer {addr} requested info")
+                self._transport.sendto(self._get_peerinfo_msg(), addr)
+                return
+            if not proto.is_valid_peerinfo(message.params):
+                logging.warning(f"Received invalid peerinfo from {addr}: {message.params}")
+                return
+            self._registry.add_peer(PeerInfo.from_osc(addr, message.params))
+
+        elif message.address == proto.ALL_PEERINFO:
+            for pi in self._registry.get_by_type(PeerType.node):
+                self._transport.sendto(proto.osc_dgram(proto.PEERINFO, pi.as_osc()), addr)
+        elif message.address == proto.DISCONNECT:
+            try:
+                self._registry.remove_peer(addr)
+            except LookupError:
+                logging.warning(f"DISCONNECT request from unregistered peer: {addr}")
