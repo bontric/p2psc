@@ -4,9 +4,6 @@ from typing import *
 
 from pythonosc.osc_message_builder import OscMessageBuilder
 
-# Zeroconf
-ZC_SERVICE_TYPE = "_cnosc._udp.local."
-
 # Groups
 ALL_NODES = "ALL"
 LOCAL_NODE = "N"
@@ -15,20 +12,24 @@ LOCAL_NODE = "N"
 STR_LIST_SEP = " "
 
 # Node commands
+P2PSC_PREFIX = "/p2psc"
+PEERINFO_PATH = P2PSC_PREFIX + "/peerinfo"
+
 PEER_INFO = "/peerinfo"  # Request/Send Node Info
-ALL_NODES_PEER_INFO  = "/" + ALL_NODES + "/" + PEER_INFO # peerinfo for all nodes (macro for sending)
+# peerinfo for all nodes (macro for sending)
+ALL_NODES_PEER_INFO = "/" + ALL_NODES + "/" + PEER_INFO
 NODE_INFO = "/nodeinfo"  # Client request local Node's peer Info
-ALL_NODE_INFO = "/allnodeinfo" # Client requests peerinfo for all nodes except local node
+ALL_NODE_INFO = "/allnodeinfo"  # Client requests peerinfo for all nodes except local node
 TEST = "/test"  # print the message
 JOIN_GROUP = "/joingroup"  # join a group
 LEAVE_GROUP = "/leavegroup"  # leave a group
-CLEAR_GROUPS = "/cleargroups" # clear all groups (except name and ALL)
+CLEAR_GROUPS = "/cleargroups"  # clear all groups (except name and ALL)
 ADD_PATH = "/addpath"  # register a path for this client
 DEL_PATH = "/delpath"  # unregister a path for this client
-CLEAR_PATHS = "/clearpaths" # remove all paths for this client
-ADD_CLIENT = "/addclient" # add client (IP, Port, paths)
-DEL_CLIENT = "/addclient" # delete client (IP, Port)
-RESET = "/reset" # reset all groups and paths
+CLEAR_PATHS = "/clearpaths"  # remove all paths for this client
+ADD_CLIENT = "/addclient"  # add client (IP, Port, paths)
+DEL_CLIENT = "/addclient"  # delete client (IP, Port)
+RESET = "/reset"  # reset all groups and paths
 
 # convenience functions for protocol
 
@@ -47,13 +48,8 @@ def osc_dgram(path, args):
     return mb.build().dgram
 
 
-def path_has_group(path: str):
-    s = path.split('/')
-    return len(s) > 2 and s[2] == ''
-
-
 def remove_group_from_path(path: str):
-    return '/'+'/'.join(path.split('/')[3:])
+    return '/'+'/'.join(path.split('/')[2:])
 
 
 def get_group_from_path(path: str):
@@ -70,7 +66,11 @@ def peerinfo_args(ptype: int, addr: Tuple[str, int], groups: List[str], paths: L
     if groups is None:
         raise ArgumentError(
             f"Trying to convert non-sharable Node to osc_args {addr}")
-    return [ptype, addr[0], addr[1], STR_LIST_SEP.join(groups), STR_LIST_SEP.join(paths)]
+    return [ptype, STR_LIST_SEP.join(groups), STR_LIST_SEP.join(paths)]
+
+
+def is_valid_peerinfo(args):
+    return len(args) == 3 and type(args[0]) == int and type(args[1]) == str and type(args[2]) == str
 
 
 def hash(addr: Tuple[str, int]):

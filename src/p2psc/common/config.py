@@ -22,22 +22,7 @@ class Config():
             "timeout": 20,
             "update_interval": 3,
             "local_ip": None,
-            "clients": {
-                "enabled" : True,
-                "port": 3760,
-            },
-            "local_nodes": {
-                "enabled" : True,
-                "port": 3761,
-            },
-            "remote_host": {
-                "enabled" : False,
-                "ip": None,
-                "port": 3762,
-            },
-            "remote_nodes": {
-                "sessions": []
-            }
+            "port": 3760,
         }
     
     def __loadConfig(self, path):

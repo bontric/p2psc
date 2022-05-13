@@ -34,9 +34,7 @@ from p2psc import __version__
 from p2psc.common.args import parse_args
 from p2psc.common.config import Config
 from p2psc.common.logging import setup_logging
-from p2psc.node.node import Node
-from p2psc.node.peers.remoteNode import RemoteNode
-from p2psc.node.zconf import NodeZconf
+from p2psc.node import Node
 
 __author__ = "Benedikt Wieder"
 __copyright__ = "Benedikt Wieder"
@@ -102,50 +100,50 @@ async def main_loop(args):
     config = Config(args.config)
 
     name = config["name"]
-    if config["local_ip"] is None:
+    if config["ip"] is None:
         logging.info("Trying to find this hosts primary IP address.. ")
-        config["local_ip"] = get_ip()
+        config["ip"] = get_ip()
         i = 0
-        while config["local_ip"] is None:
+        while config["ip"] is None:
             logging.warning("Unable to get local IP address, retrying in 10 seconds..")
             await asyncio.sleep(10)
-            config["local_ip"] = get_ip()
+            config["ip"] = get_ip()
             i += 1
             if i == 10:
                 logging.error("Unable to get local IP address")
                 return
-        logging.info(f"Using IP address: {config['local_ip']}")
+        logging.info(f"Using IP address: {config['ip']}")
 
-    if config["remote_host"]["enabled"]:
-        # Setting a "session" in config is a hidden option for testing
-        if config['remote_host'].get('session') is None:
-            if config['remote_host'].get('ip') is None:
-                logging.error("Remote IP must be set if remote_host is enabled")
-                return
-            gaddr = (config['remote_host']['ip'], config['remote_host']['port'])
-            logging.info(f"Generating Session for connections on {gaddr}")
-            session, key = make_session(gaddr)
-            logging.info(f"Session String: {session}")
-        else:
-            logging.warning(
-                f"UNSAFE: Reusing Session: {config['remote_host']['session']}")
-            raddr, key = parse_session(config['remote_host']['session'])
-            config['remote_host']['ip'] = raddr[0]
-            config['remote_host']['port'] = raddr[1]
-        config['remote_host']['key'] = key
+    # if config["remote_host"]["enabled"]:
+    #     # Setting a "session" in config is a hidden option for testing
+    #     if config['remote_host'].get('session') is None:
+    #         if config['remote_host'].get('ip') is None:
+    #             logging.error("Remote IP must be set if remote_host is enabled")
+    #             return
+    #         gaddr = (config['remote_host']['ip'], config['remote_host']['port'])
+    #         logging.info(f"Generating Session for connections on {gaddr}")
+    #         session, key = make_session(gaddr)
+    #         logging.info(f"Session String: {session}")
+    #     else:
+    #         logging.warning(
+    #             f"UNSAFE: Reusing Session: {config['remote_host']['session']}")
+    #         raddr, key = parse_session(config['remote_host']['session'])
+    #         config['remote_host']['ip'] = raddr[0]
+    #         config['remote_host']['port'] = raddr[1]
+    #     config['remote_host']['key'] = key
 
     node = Node(config)
 
-    for s in config["remote_nodes"]["sessions"]:
-        addr, key = parse_session(s)
-        logging.info(f"Connecting to remote Node {addr} using key {key}")
-        await node._registry.connect_remote(addr, key)
+    # for s in config["remote_nodes"]["sessions"]:
+    #     addr, key = parse_session(s)
+    #     logging.info(f"Connecting to remote Node {addr} using key {key}")
+    #     await node._registry.connect_remote(addr, key)
 
-    if args.remotes is not None:
-        for s in args.remotes.split(','):
-            addr, key = parse_session(s)
-            logging.info(f"Connecting to remote Node {addr} using key {key}")
-            await node._registry.connect_remote(addr, key)
+    # if args.remotes is not None:
+    #     for s in args.remotes.split(','):
+    #         addr, key = parse_session(s)
+    #         logging.info(f"Connecting to remote Node {addr} using key {key}")
+    #         await node._registry.connect_remote(addr, key)
 
     _logger.info("Starting main loop")
     await node.serve()

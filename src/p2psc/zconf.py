@@ -8,13 +8,12 @@ import ipaddress
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf, AsyncServiceBrowser
 
-from p2psc.node import proto
-
 ZEROCONF_TTL = 10
 ZEROCONF_UPDATE_INTERVAL = 15
 
 
 class NodeZconf():
+    ZC_SERVICE_TYPE = "_cnosc._udp.local."
     def __init__(self, addr: Tuple[str, int], node_callback: Callable[[Tuple[str, int], ServiceStateChange], None]) -> None:
         self._node_callback = node_callback
         self._addr = addr
@@ -23,8 +22,8 @@ class NodeZconf():
         self._serve_task = None
 
         self._zcinfo = AsyncServiceInfo(
-            proto.ZC_SERVICE_TYPE,
-            f"{self.convert_addr_to_str(addr)}." + proto.ZC_SERVICE_TYPE,
+            NodeZconf.ZC_SERVICE_TYPE,
+            f"{self.convert_addr_to_str(addr)}." + NodeZconf.ZC_SERVICE_TYPE,
             addresses=[addr[0]],
             port=addr[1]
         )
@@ -58,7 +57,7 @@ class NodeZconf():
         logging.debug("Finished zeroconf registration for node")
 
         self._aiozc_browser = AsyncServiceBrowser(
-            self._aiozc.zeroconf, [proto.ZC_SERVICE_TYPE], handlers=[self._on_service_state_change])
+            self._aiozc.zeroconf, [NodeZconf.ZC_SERVICE_TYPE], handlers=[self._on_service_state_change])
 
         self._serve_task = asyncio.ensure_future(self.__loop())
 
