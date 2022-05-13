@@ -8,40 +8,11 @@ from typing import Tuple, Union
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
 
-UDP_MAX_DATA = 65507
-
-class PeerProtocol(asyncio.DatagramProtocol):
-    """ Mixed transport and protocol implementation
-
-        Kinda Hacky but it works for now
-    """
-
-    def datagram_received(self, dgram, addr):
-        raise NotImplementedError()
-
-    def connection_made(self, transport):
-        raise NotImplementedError()
-
-    def connection_lost(self, exc):
-        raise NotImplementedError()
-
-    def error_received(self, exc):
-        raise NotImplementedError()
-
-    def sendto(self, data, addr):
-        raise NotImplementedError()
-
-    def close():
-        raise NotImplementedError()
-
-    def is_closing(self):
-        raise NotImplementedError()
-
 class OscHandler():
     async def on_osc(self, addr: Tuple[str, int], message: Union[OscBundle, OscMessage]):
         raise NotImplementedError()
 
-class OscProtocolUdp(PeerProtocol):
+class OscProtocolUdp(asyncio.DatagramProtocol):
     def __init__(self, handler: OscHandler):
         self._handler = handler
         self._transport = None  # type: asyncio.DatagramTransport
@@ -66,20 +37,7 @@ class OscProtocolUdp(PeerProtocol):
     def connection_made(self, transport):
         self._transport = transport
 
-    def error_received(self, exc):
-        logging.error(
-            f"{str(exc)})")
-
-    def sendto(self, data, addr):
-        if self._transport is not None:
-            self._transport.sendto(data, addr)
-        else:
-            raise ConnectionAbortedError()
-
     def connection_lost(self, exc):
         logging.info(f"Connection lost: {str(exc)})")
         self._transport = None
-
-    def is_closing(self):
-        return self._transport.is_closing()
 
