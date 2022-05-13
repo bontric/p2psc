@@ -8,6 +8,7 @@ from p2psc.peerProtocol import OscHandler, OscProtocolUdp
 from p2psc.peerInfo import PeerInfo, PeerType
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle
+from pythonosc.osc_bundle_builder import OscBundleBuilder, IMMEDIATELY
 
 from p2psc.peerRegistry import PeerRegistry
 from p2psc.zconf import NodeZconf
@@ -142,8 +143,10 @@ class Node(OscHandler):
                 return
             self._registry.add_peer(PeerInfo.from_osc(addr, message.params))
         elif message.address == proto.ALL_PEERINFO:
+            bb = OscBundleBuilder(IMMEDIATELY)
             for pi in self._registry.get_by_type(PeerType.node):
-                self._transport.sendto(proto.osc_dgram(proto.PEERINFO, pi.as_osc()), addr)
+                bb.add_content(proto.osc_message(proto.PEERINFO, pi.as_osc()))
+            self._transport.sendto(bb.build().dgram, addr)
         elif message.address == proto.DISCONNECT:
             try:
                 self._registry.remove_peer(addr)
