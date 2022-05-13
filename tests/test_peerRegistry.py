@@ -67,3 +67,45 @@ def test_cleanup():
     assert reg.get_peer(pi_client.addr) == pi_client
     with pytest.raises(LookupError):
         reg.get_peer(pi_node.addr)
+
+
+def test_by_path():
+    reg = PeerRegistry("name")
+    groups = ["name", "A", "B", proto.ALL_NODES]
+    paths_c = ["/test", "/abc"]
+    paths_n = ["/test", "/def"]
+    c = PeerInfo(("127.0.0.1", 1), groups=groups[1:2], paths=paths_c, type=PeerType.client)
+    n = PeerInfo(("127.0.0.1", 2), groups=groups[2:4], paths=paths_n, type=PeerType.node)
+    reg.add_peer(c)
+    reg.add_peer(n)
+
+    peers = reg.get_by_path("/A/test")
+    assert c in peers and n not in peers
+
+    peers = reg.get_by_path("/B/test")
+    assert c not in peers and n in peers
+
+    peers = reg.get_by_path(f"/{proto.ALL_NODES}/test")
+    assert c in peers and n in peers
+
+    peers = reg.get_by_path("/name/test")
+    assert c in peers and n not in peers
+
+    peers = reg.get_by_path(f"/{proto.ALL_NODES}/abc")
+    assert c in peers and n not in peers
+
+    peers = reg.get_by_path(f"/{proto.ALL_NODES}/def")
+    assert c not in peers and n in peers
+
+    peers = reg.get_by_path(f"/{proto.ALL_NODES}/xyz")
+    assert c not in peers and n not in peers
+
+def test_add():
+    reg = PeerRegistry("name")
+    groups = ["A", "B"]
+    paths_c = ["/test", "/abc"]
+    c = PeerInfo(("127.0.0.1", 1), groups=groups, paths=paths_c, type=PeerType.client)
+    reg.add_peer(c)
+
+    assert "name" in c.groups
+    assert proto.ALL_NODES in c.groups
