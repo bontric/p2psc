@@ -44,7 +44,7 @@ class PeerInfo:
     def is_expired(self):
         if self.type == PeerType.client:
             return False
-        return time.time() > self.last_update_t + PeerInfo.NODE_EXPIRY_T
+        return time.time() >= self.last_update_t + PeerInfo.NODE_EXPIRY_T
 
     def subscribes(self, path:str):
         """
