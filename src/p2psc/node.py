@@ -19,7 +19,7 @@ class Node(OscHandler):
         self._registry = PeerRegistry(config["name"])
         self._addr = (config["ip"], config["port"])
         self._running = False
-        self._transport = None  # type: OscProtocolUdp
+        self._transport = None  # type: asyncio.DatagramTransport
         self._protocol = None  # type: OscProtocolUdp
         self._loop_task = None
 
