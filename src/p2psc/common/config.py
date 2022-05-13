@@ -21,7 +21,7 @@ class Config():
             "zeroconf": True,
             "timeout": 20,
             "update_interval": 3,
-            "local_ip": None,
+            "ip": None,
             "port": 3760,
         }
     
