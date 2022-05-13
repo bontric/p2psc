@@ -1,4 +1,5 @@
 import pytest
+from p2psc import proto
 from p2psc.peerRegistry import PeerRegistry
 from p2psc.peerInfo import PeerInfo, PeerType
 
@@ -21,7 +22,7 @@ def test_get_by_type():
 
 def test_get_local():
     reg = PeerRegistry("name")
-    groups = [ "A", "B", "ALL", "name"]
+    groups = ["A", "B", proto.ALL_NODES, "name"]
     paths = ["a", "b"]
     not_groups = ["C"]
     not_paths = ["c"]
@@ -58,7 +59,6 @@ def test_cleanup():
     reg.cleanup()
     assert reg.get_peer(pi_client.addr) == pi_client
     assert reg.get_peer(pi_node.addr) == pi_node
-
 
     # Check whether node is removed after expiry
     pi_node.last_update_t = 0
