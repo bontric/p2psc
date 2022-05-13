@@ -79,6 +79,10 @@ class PeerRegistry:
             pass
         self.addr_peer_map[pi.addr] = pi
 
+        # Add default groups to clients
+        if pi.type == PeerType.client:
+            pi.groups.extend([self._node_name, proto.ALL_NODES])
+
     def cleanup(self):
         """
         Remove expired peerinfos from registry
