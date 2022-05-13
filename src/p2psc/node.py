@@ -133,6 +133,9 @@ class Node(OscHandler):
                 self._transport.sendto(m, pi.addr)
 
     def _handle_local(self, addr, message: OscMessage):
+        """
+        Handles OSC messages for local node
+        """
         if message.address == proto.PEERINFO:
             if len(message.params) == 0:
                 logging.debug(f"Peer {addr} requested info")
