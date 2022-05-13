@@ -42,4 +42,24 @@ def test_get_local():
     lpaths = reg.get_local_paths()
     for p in paths:
         assert p in lpaths
-    assert lpaths == paths
+
+
+def test_cleanup():
+    reg = PeerRegistry("name")
+    pi_client = PeerInfo(("127.0.0.1", 1), type=PeerType.client)
+    pi_node = PeerInfo(("127.0.0.1", 2), type=PeerType.node)
+    reg.add_peer(pi_client)
+    reg.add_peer(pi_node)
+
+    reg.cleanup()
+
+    assert reg.get_peer(pi_client.addr) == pi_client
+    assert reg.get_peer(pi_node.addr) == pi_node
+
+    pi_node.last_update_t = 0
+
+    reg.cleanup()
+
+    assert reg.get_peer(pi_client.addr) == pi_client
+    with pytest.raises(LookupError):
+        reg.get_peer(pi_node.addr)
