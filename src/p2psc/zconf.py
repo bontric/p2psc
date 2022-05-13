@@ -8,7 +8,7 @@ import ipaddress
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf, AsyncServiceBrowser
 
-ZEROCONF_TTL = 10
+ZEROCONF_TTL = 1
 ZEROCONF_UPDATE_INTERVAL = 15
 
 
@@ -66,7 +66,7 @@ class NodeZconf():
         while self._running:
             try:
                 await asyncio.sleep(ZEROCONF_UPDATE_INTERVAL)
-                await self._aiozc.async_update_service(self._zcinfo)
+                asyncio.ensure_future(self._aiozc.async_update_service(self._zcinfo))
             except asyncio.CancelledError:
                 return
 
