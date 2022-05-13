@@ -5,7 +5,7 @@ import random
 import string
 
 # this only workson NIX.. fix it
-DEFAULT_PATH = os.path.expanduser('~') + "/.oscp2psc.conf"
+DEFAULT_PATH = os.path.expanduser('~') + "/.p2psc.conf"
 
 class Config():
     def __init__(self, path=None):
