@@ -4,7 +4,6 @@ import abc
 import asyncio
 import logging
 from typing import Tuple, Union
-from Crypto.Cipher import AES
 
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_bundle import OscBundle

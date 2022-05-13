@@ -1,6 +1,7 @@
 from argparse import ArgumentError
 import hashlib
 from typing import *
+from matplotlib.pyplot import disconnect
 
 from pythonosc.osc_message_builder import OscMessageBuilder
 
@@ -13,25 +14,15 @@ STR_LIST_SEP = " "
 
 # Node commands
 P2PSC_PREFIX = "/p2psc"
+
+# request peerinfo
 PEERINFO_PATH = P2PSC_PREFIX + "/peerinfo"
 
-PEER_INFO = "/peerinfo"  # Request/Send Node Info
-# peerinfo for all nodes (macro for sending)
-ALL_NODES_PEER_INFO = "/" + ALL_NODES + "/" + PEER_INFO
-NODE_INFO = "/nodeinfo"  # Client request local Node's peer Info
-ALL_NODE_INFO = "/allnodeinfo"  # Client requests peerinfo for all nodes except local node
-TEST = "/test"  # print the message
-JOIN_GROUP = "/joingroup"  # join a group
-LEAVE_GROUP = "/leavegroup"  # leave a group
-CLEAR_GROUPS = "/cleargroups"  # clear all groups (except name and ALL)
-ADD_PATH = "/addpath"  # register a path for this client
-DEL_PATH = "/delpath"  # unregister a path for this client
-CLEAR_PATHS = "/clearpaths"  # remove all paths for this client
-ADD_CLIENT = "/addclient"  # add client (IP, Port, paths)
-DEL_CLIENT = "/addclient"  # delete client (IP, Port)
-RESET = "/reset"  # reset all groups and paths
+# request peerinfo for all nodes except local node
+ALL_NODE_INFO = P2PSC_PREFIX + "/allnodeinfo"
 
-# convenience functions for protocol
+# disconnect from node
+DISCONNECT = P2PSC_PREFIX + "/disconnect"
 
 
 def osc_message(path, args):

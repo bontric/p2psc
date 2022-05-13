@@ -6,7 +6,8 @@ from p2psc.peerInfo import PeerInfo, PeerType
 
 
 class PeerRegistry:
-    def __init__(self) -> None:
+    def __init__(self, name) -> None:
+        self._node_name = name
         self.addr_peer_map = {}  # type: Dict[Tuple(), PeerInfo]
         # NOTE: kinda unsure about these
         self.path_peer_map = {}  # type: Dict[str, PeerInfo]
@@ -25,7 +26,7 @@ class PeerRegistry:
         """
         Return all groups subscribed by clients connected to this node
         """
-        groups = []
+        groups = [self._node_name]
         for pi in filter(lambda x: x.type == PeerType.client,  self.addr_peer_map.values()):
             groups.extend(pi.groups)
         if proto.ALL_NODES not in groups:

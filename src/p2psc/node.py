@@ -16,7 +16,7 @@ from p2psc import proto
 
 class Node(OscHandler):
     def __init__(self, config: Config) -> None:
-        self._registry = PeerRegistry()
+        self._registry = PeerRegistry(config["name"])
         self._addr = (config["ip"], config["port"])
         self._running = False
         self._transport = None  # type: OscProtocolUdp

@@ -19,16 +19,11 @@ References:
     - https://setuptools.readthedocs.io/en/latest/userguide/entry_point.html
     - https://pip.pypa.io/en/stable/reference/pip_install
 """
-from ast import AsyncFunctionDef
 import asyncio
-import base64
 import logging
-import os
 import signal
 import socket
 import sys
-from typing import Any, List, Tuple
-import secrets
 
 from p2psc import __version__
 from p2psc.common.args import parse_args
@@ -43,6 +38,7 @@ __license__ = "MIT"
 _logger = logging.getLogger(__name__)
 
 node = None
+MAX_IP_GET_ATTEMPTS = 10
 
 
 def get_ip():
@@ -60,24 +56,6 @@ def get_ip():
     finally:
         s.close()
     return IP
-
-
-def make_session(addr, key_generated=None, length=16):
-    if key_generated is None:
-        key_generated = secrets.token_urlsafe(nbytes=length)
-    addr_str = NodeZconf.convert_addr_to_str(addr)
-    session = addr_str+key_generated
-    key = base64.urlsafe_b64encode(key_generated.encode('ascii'))
-    return session, key
-
-
-def parse_session(session: str):
-    if len(session) < 12:
-        logging.error(f"Session string is invalid: Invalid length {len(session)}")
-        exit(-1)
-    raddr = NodeZconf.convert_str_to_addr(session[:12])
-    key = base64.urlsafe_b64encode(session[12:].encode('ascii'))
-    return raddr, key
 
 
 def signal_handler(sig, frame):
@@ -99,53 +77,24 @@ async def main_loop(args):
     global node
     config = Config(args.config)
 
-    name = config["name"]
     if config["ip"] is None:
-        logging.info("Trying to find this hosts primary IP address.. ")
-        config["ip"] = get_ip()
-        i = 0
-        while config["ip"] is None:
-            logging.warning("Unable to get local IP address, retrying in 10 seconds..")
-            await asyncio.sleep(10)
+        for _ in range(MAX_IP_GET_ATTEMPTS):
+            logging.info("Trying to find this hosts primary IP address.. ")
             config["ip"] = get_ip()
-            i += 1
-            if i == 10:
-                logging.error("Unable to get local IP address")
-                return
-        logging.info(f"Using IP address: {config['ip']}")
+            if config["ip"] is not None:
+                break
+            logging.warning("Unable to get local IP address, retrying in 5 seconds..")
+            await asyncio.sleep(5)
 
-    # if config["remote_host"]["enabled"]:
-    #     # Setting a "session" in config is a hidden option for testing
-    #     if config['remote_host'].get('session') is None:
-    #         if config['remote_host'].get('ip') is None:
-    #             logging.error("Remote IP must be set if remote_host is enabled")
-    #             return
-    #         gaddr = (config['remote_host']['ip'], config['remote_host']['port'])
-    #         logging.info(f"Generating Session for connections on {gaddr}")
-    #         session, key = make_session(gaddr)
-    #         logging.info(f"Session String: {session}")
-    #     else:
-    #         logging.warning(
-    #             f"UNSAFE: Reusing Session: {config['remote_host']['session']}")
-    #         raddr, key = parse_session(config['remote_host']['session'])
-    #         config['remote_host']['ip'] = raddr[0]
-    #         config['remote_host']['port'] = raddr[1]
-    #     config['remote_host']['key'] = key
+    if config["ip"] is None:
+        logging.error("Unable to get local IP address")
+        exit(1)
+
+    logging.info(f"Using IP address: {config['ip']}")
 
     node = Node(config)
 
-    # for s in config["remote_nodes"]["sessions"]:
-    #     addr, key = parse_session(s)
-    #     logging.info(f"Connecting to remote Node {addr} using key {key}")
-    #     await node._registry.connect_remote(addr, key)
-
-    # if args.remotes is not None:
-    #     for s in args.remotes.split(','):
-    #         addr, key = parse_session(s)
-    #         logging.info(f"Connecting to remote Node {addr} using key {key}")
-    #         await node._registry.connect_remote(addr, key)
-
-    _logger.info("Starting main loop")
+    _logger.info(f"Starting main loop for Node: {config['name']}")
     await node.serve()
 
 
