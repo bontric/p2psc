@@ -123,13 +123,13 @@ class Node(OscHandler):
 
         # Messages from clients are only forwarded to nodes
         if peer_type == PeerType.client:  
-            for pi in self._registry.get_by_path(message.address): 
+            for pi in self._registry.get_by_path(message.address, filter_type=PeerType.node): 
                 logging.info(f"Forwarding {message.address} {message.params} to {pi.addr}")
                 self._transport.sendto(message.dgram, pi.addr)
         else: # Messages from nodes are only forwarded to clients
-            # remove group from path TODO: maybe preserve group?!
+            # remove group from path 
             m = proto.osc_dgram(proto.remove_group_from_path(message.address), message.params)
-            for pi in self._registry.get_by_path(message.address): 
+            for pi in self._registry.get_by_path(message.address, filter_type=PeerType.client): 
                 self._transport.sendto(m, pi.addr)
 
     def _handle_local(self, addr, message: OscMessage):
