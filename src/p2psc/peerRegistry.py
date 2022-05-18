@@ -8,7 +8,7 @@ from p2psc.peerInfo import PeerInfo, PeerType
 class PeerRegistry:
     def __init__(self, name) -> None:
         self._node_name = name
-        self.addr_peer_map = {}  # type: Dict[Tuple(), PeerInfo]
+        self.addr_peer_map = {}  # type: Dict[Tuple, PeerInfo]
         # NOTE: kinda unsure about these
         self.path_peer_map = {}  # type: Dict[str, PeerInfo]
         self.group_peer_map = {}  # type: Dict[str, PeerInfo]
@@ -74,6 +74,7 @@ class PeerRegistry:
         if pi.addr not in self.addr_peer_map:
             logging.info(f"ADDED: Peer {pi.addr} to registry")
         else:
+            if self.addr_peer_map[pi.addr].name
             # This is rather spammy running multiple nodes
             # logging.debug(f"Peer {pi.addr} updated registry")
             pass
