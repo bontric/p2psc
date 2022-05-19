@@ -18,7 +18,7 @@ class OscProtocolUdp(asyncio.DatagramProtocol):
         self._transport = None  # type: asyncio.DatagramTransport
 
     def datagram_received(self, dgram, addr):
-        """Called when a datagram is received from a newly connected peer."""
+        """Called when a UDP message is received """
 
         # Parse OSC message
         try:
