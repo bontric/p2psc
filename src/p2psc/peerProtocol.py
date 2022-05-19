@@ -38,6 +38,6 @@ class OscProtocolUdp(asyncio.DatagramProtocol):
         self._transport = transport
 
     def connection_lost(self, exc):
-        logging.info(f"Connection lost: {str(exc)})")
+        logging.info(f"Connection lost: {str(exc)}")
         self._transport = None
 
