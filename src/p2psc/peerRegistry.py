@@ -71,7 +71,6 @@ class PeerRegistry:
         if pi.addr not in self.addr_peer_map:
             logging.info(f"ADDED: Peer {pi.addr} to registry")
         else:
-            if self.addr_peer_map[pi.addr].name
             # This is rather spammy running multiple nodes
             # logging.debug(f"Peer {pi.addr} updated registry")
             pass
