@@ -9,9 +9,6 @@ class PeerRegistry:
     def __init__(self, name) -> None:
         self._node_name = name
         self.addr_peer_map = {}  # type: Dict[Tuple, PeerInfo]
-        # NOTE: kinda unsure about these
-        self.path_peer_map = {}  # type: Dict[str, PeerInfo]
-        self.group_peer_map = {}  # type: Dict[str, PeerInfo]
 
     def get_local_paths(self) -> List[str]:
         """
