@@ -16,7 +16,7 @@ class PeerType(Enum):
 class PeerInfo:
     NODE_EXPIRY_T = 20  # in seconds
 
-    def __init__(self, addr, groups: List[str] = ["ALL"], paths: List[str] = [], type: PeerType = PeerType.client) -> None:
+    def __init__(self, addr, groups: List[str] = [], paths: List[str] = [], type: PeerType = PeerType.client) -> None:
         self.addr = addr
         self.paths = paths
         self.groups = groups
@@ -52,7 +52,8 @@ class PeerInfo:
         """
 
         # check if group is in path
-        if proto.get_group_from_path(path) not in self.groups:
+        group = proto.get_group_from_path(path)
+        if group != proto.ALL_NODES and group not in self.groups:
             return False
 
         path = proto.remove_group_from_path(path)

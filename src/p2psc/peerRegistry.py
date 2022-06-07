@@ -23,12 +23,12 @@ class PeerRegistry:
         """
         Return all groups subscribed by clients connected to this node
         """
-        groups = [self._node_name]
+        groups = []
         for pi in filter(lambda x: x.type == PeerType.client,  self.addr_peer_map.values()):
             groups.extend(pi.groups)
-        if proto.ALL_NODES not in groups:
-            groups.append("ALL")
-        return set(groups)
+        groups = list(set(groups)) # remove duplicates
+        groups.insert(0, self._node_name) # Insert own name as first element in groups
+        return groups
 
     def get_by_type(self, t: PeerType) -> List[PeerInfo]:
         """
@@ -76,9 +76,10 @@ class PeerRegistry:
             pass
         self.addr_peer_map[pi.addr] = pi
 
-        # Add default groups to clients
+        # Client subscribes all groups this node subscribes
+        # Note: "get_local_groups" will also return the client's own groups here
         if pi.type == PeerType.client:
-            pi.groups.extend([self._node_name, proto.ALL_NODES])
+            pi.groups = self.get_local_groups()
 
     def cleanup(self):
         """
