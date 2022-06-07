@@ -46,9 +46,9 @@ def get_group_from_path(path: str):
     return path.split('/')[1]
 
 
-def str_to_list(l: str):
+def str_to_list(s: str):
     """ Convert a space seperated list string to list"""
-    return l.split(STR_LIST_SEP)
+    return list(filter(''.__ne__, s.split(STR_LIST_SEP)))
 
 
 def peerinfo_args(ptype: int, addr: Tuple[str, int], groups: List[str], paths: List[str]):

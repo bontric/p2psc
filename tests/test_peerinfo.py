@@ -34,5 +34,9 @@ def test_osc():
     assert pi.type == t
     assert pi.paths == paths
 
+    pi = PeerInfo.from_osc(addr, [1, "", ""])
+    assert pi.groups == []
+    assert pi.paths == []
+ 
 def test_subscribes():
     pass # tested in registry_by_path
