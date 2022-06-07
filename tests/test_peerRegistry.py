@@ -22,7 +22,7 @@ def test_get_by_type():
 
 def test_get_local():
     reg = PeerRegistry("name")
-    groups = ["A", "B", proto.ALL_NODES, "name"]
+    groups = ["A", "B", "name"]
     paths = ["a", "b"]
     not_groups = ["C"]
     not_paths = ["c"]
@@ -45,6 +45,10 @@ def test_get_local():
     lpaths = reg.get_local_paths()
     for p in paths:
         assert p in lpaths
+    
+    reg = PeerRegistry("nodeD")
+    lgroups = reg.get_local_groups()
+    assert lgroups == ["nodeD"]
 
 
 def test_cleanup():
@@ -71,7 +75,7 @@ def test_cleanup():
 
 def test_by_path():
     reg = PeerRegistry("name")
-    groups = ["name", "A", "B", proto.ALL_NODES]
+    groups = ["name", "A", "B"]
     paths_c = ["/test", "/abc"]
     paths_n = ["/test", "/def"]
     c = PeerInfo(("127.0.0.1", 1), groups=groups[1:2], paths=paths_c, type=PeerType.client)
@@ -108,4 +112,4 @@ def test_add():
     reg.add_peer(c)
 
     assert "name" in c.groups
-    assert proto.ALL_NODES in c.groups
+    assert proto.ALL_NODES not in c.groups

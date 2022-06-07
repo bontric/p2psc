@@ -117,6 +117,8 @@ class Test(IsolatedAsyncioTestCase):
 
 
 def test_handle_local():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     node = Node(make_config())
     node._transport = FakeTransport()
     node._transport.sendto = MagicMock()
@@ -154,3 +156,4 @@ def test_handle_local():
     node._registry.remove_peer.assert_called_once_with(addr)
     node._transport.sendto.assert_not_called()
     node._registry.add_peer.assert_not_called()
+    loop.close()
