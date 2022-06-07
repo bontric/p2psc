@@ -11,6 +11,7 @@ from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf, AsyncServiceBrowse
 ZEROCONF_TTL = 1
 ZEROCONF_UPDATE_INTERVAL = 15
 
+DEBUG_MDNS_UPDATES = False
 
 class NodeZconf():
     ZC_SERVICE_TYPE = "_cnosc._udp.local."
@@ -92,7 +93,8 @@ class NodeZconf():
         if node_addr[0] == self._addr[0] and node_addr[1] == self._addr[1]:
             return  # ignore info from own node
 
-        logging.debug(
-            f"Service {name} of type {service_type} state changed: {state_change}")
+        if DEBUG_MDNS_UPDATES:
+            logging.debug(
+                f"Service {name} of type {service_type} state changed: {state_change}")
 
         self._node_callback(node_addr, state_change)

@@ -94,7 +94,7 @@ class Node(OscHandler):
             return
         try:
             self._registry.get_peer(addr).refresh()
-            logging.debug(f"MDNS UPDATE node at {addr}")
+            # logging.debug(f"MDNS UPDATE node at {addr}")
         except LookupError:
             logging.info(f"MDNS DISCOVERED node at {addr}")
             pi = PeerInfo(addr, type=PeerType.node)
