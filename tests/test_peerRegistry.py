@@ -107,9 +107,23 @@ def test_by_path():
 def test_add():
     reg = PeerRegistry("name")
     groups = ["A", "B"]
+    groups2 = ["C"]
     paths_c = ["/test", "/abc"]
     c = PeerInfo(("127.0.0.1", 1), groups=groups, paths=paths_c, type=PeerType.client)
     reg.add_peer(c)
 
-    assert "name" in c.groups
-    assert proto.ALL_NODES not in c.groups
+    assert "name" not in c.groups
+    assert proto.ALL_NODES_GROUP not in c.groups
+
+    c2 = PeerInfo(("127.0.0.1", 2), groups=groups2, paths=paths_c, type=PeerType.client)
+    reg.add_peer(c2)
+
+    assert groups2[0] not in c.groups
+
+    reg._update_local()
+
+    assert paths_c[0] in reg._local_paths
+    assert paths_c[1] in reg._local_paths
+    assert groups[0] in reg._local_groups
+    assert groups[1] in reg._local_groups
+    assert groups2[0] in reg._local_groups
