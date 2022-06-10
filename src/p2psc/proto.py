@@ -5,8 +5,7 @@ from typing import *
 from pythonosc.osc_message_builder import OscMessageBuilder
 
 # Groups
-ALL_NODES = "ALL"
-LOCAL_NODE = "N"
+ALL_NODES_GROUP = "ALL"
 
 # Seperator for string lists
 STR_LIST_SEP = " "
@@ -14,14 +13,26 @@ STR_LIST_SEP = " "
 # Node commands
 P2PSC_PREFIX = "p2psc"
 
-# request peerinfo
+# Request peerinfo
 PEERINFO = '/'+P2PSC_PREFIX + "/peerinfo"
 
 # request peerinfo for all nodes except local node
-ALL_PEERINFO = '/'+P2PSC_PREFIX + "/allpeerinfo"
+PEERINFOS = '/'+P2PSC_PREFIX + "/peerinfos"
 
 # disconnect from node
 DISCONNECT = '/'+P2PSC_PREFIX + "/disconnect"
+
+# Get Nodenames in Network
+PEERNAMES = '/'+P2PSC_PREFIX + "/peernames"
+NODENAME = '/'+P2PSC_PREFIX + "/name"
+
+# Get Groups
+GROUPS = '/'+P2PSC_PREFIX + "/groups"
+
+# Get paths for node (if no node is provided returns local paths)
+GET_PATHS = '/'+P2PSC_PREFIX + "/paths"
+
+
 
 
 def osc_message(path, args):
@@ -49,6 +60,11 @@ def get_group_from_path(path: str):
 def str_to_list(s: str):
     """ Convert a space seperated list string to list"""
     return list(filter(''.__ne__, s.split(STR_LIST_SEP)))
+
+
+def list_to_str(groups: List[str]):
+    """ Convert a list to a space seperated string"""
+    return STR_LIST_SEP.join(groups)
 
 
 def peerinfo_args(ptype: int, addr: Tuple[str, int], groups: List[str], paths: List[str]):

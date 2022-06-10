@@ -89,19 +89,19 @@ def test_by_path():
     peers = reg.get_by_path("/B/test")
     assert c not in peers and n in peers
 
-    peers = reg.get_by_path(f"/{proto.ALL_NODES}/test")
+    peers = reg.get_by_path(f"/{proto.ALL_NODES_GROUP}/test")
     assert c in peers and n in peers
 
     peers = reg.get_by_path("/name/test")
     assert c in peers and n not in peers
 
-    peers = reg.get_by_path(f"/{proto.ALL_NODES}/abc")
+    peers = reg.get_by_path(f"/{proto.ALL_NODES_GROUP}/abc")
     assert c in peers and n not in peers
 
-    peers = reg.get_by_path(f"/{proto.ALL_NODES}/def")
+    peers = reg.get_by_path(f"/{proto.ALL_NODES_GROUP}/def")
     assert c not in peers and n in peers
 
-    peers = reg.get_by_path(f"/{proto.ALL_NODES}/xyz")
+    peers = reg.get_by_path(f"/{proto.ALL_NODES_GROUP}/xyz")
     assert c not in peers and n not in peers
 
 def test_add():

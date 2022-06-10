@@ -81,7 +81,7 @@ class Test(IsolatedAsyncioTestCase):
         addr = ("127.0.0.1", 1)
 
         # Local functions are handled
-        for path in [proto.PEERINFO, proto.ALL_PEERINFO, proto.DISCONNECT]:
+        for path in [proto.PEERINFO, proto.PEERINFOS, proto.DISCONNECT]:
             msg = OscMessageBuilder(path).build()
             await node.on_osc(addr, msg)
             node._handle_local.assert_called_once_with(addr, msg)
@@ -144,7 +144,7 @@ def test_handle_local():
     node._registry.add_peer.reset_mock()
 
     # allpeerinfo request
-    msg = OscMessageBuilder(proto.ALL_PEERINFO).build()
+    msg = OscMessageBuilder(proto.PEERINFOS).build()
     node._handle_local(addr, msg)
     node._transport.sendto.assert_called_once()
     node._transport.sendto.reset_mock()
