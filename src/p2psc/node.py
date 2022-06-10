@@ -59,9 +59,9 @@ class Node(OscHandler):
                 break
             self._registry.cleanup()
             info = self._get_peerinfo_msg()
-            
+
             # TODO: Only update peerinfos on change // implement ACK for peerinfo
-            for pi in self._registry.get_by_type(PeerType.node):  
+            for pi in self._registry.get_by_type(PeerType.node):
                 self._transport.sendto(info, pi.addr)
 
     def stop(self):
@@ -74,7 +74,7 @@ class Node(OscHandler):
         self._running = False
         self._loop_task.cancel()
         self._transport.close()
-    
+
     def _get_peerinfo_msg(self):
         paths = self._registry.get_local_paths()
         groups = self._registry.get_local_groups()
@@ -111,25 +111,27 @@ class Node(OscHandler):
         # Peerinfo messages are handled locally
         if proto.get_group_from_path(message.address) == proto.P2PSC_PREFIX:
             self._handle_local(addr, message)
-            return 
-        
+            return
+
         # All other messages are forwarded to clients/nodes depending on sender
         try:
-            peer_type = self._registry.get_peer(addr).type #type: PeerInfo
+            peer_type = self._registry.get_peer(addr).type  # type: PeerInfo
         except LookupError:
             # If we don't know the peer we simply assume it is a client requesting us to forward the message
             # TODO: Any implications here?!
             peer_type = PeerType.client
 
         # Messages from clients are only forwarded to nodes
-        if peer_type == PeerType.client:  
-            for pi in self._registry.get_by_path(message.address, filter_type=PeerType.node): 
-                logging.info(f"Forwarding {message.address} {message.params} to {pi.addr}")
+        if peer_type == PeerType.client:
+            for pi in self._registry.get_by_path(message.address, filter_type=PeerType.node):
+                logging.info(
+                    f"Forwarding {message.address} {message.params} to {pi.addr}")
                 self._transport.sendto(message.dgram, pi.addr)
-        else: # Messages from nodes are only forwarded to clients
-            # remove group from path 
-            m = proto.osc_dgram(proto.remove_group_from_path(message.address), message.params)
-            for pi in self._registry.get_by_path(message.address, filter_type=PeerType.client): 
+        else:  # Messages from nodes are only forwarded to clients
+            # remove group from path
+            m = proto.osc_dgram(proto.remove_group_from_path(
+                message.address), message.params)
+            for pi in self._registry.get_by_path(message.address, filter_type=PeerType.client):
                 self._transport.sendto(m, pi.addr)
 
     def _handle_local(self, addr, message: OscMessage):
@@ -142,7 +144,8 @@ class Node(OscHandler):
                 self._transport.sendto(self._get_peerinfo_msg(), addr)
                 return
             if not proto.is_valid_peerinfo(message.params):
-                logging.warning(f"Received invalid peerinfo from {addr}: {message.params}")
+                logging.warning(
+                    f"Received invalid peerinfo from {addr}: {message.params}")
                 return
             self._registry.add_peer(PeerInfo.from_osc(addr, message.params))
         elif message.address == proto.ALL_PEERINFO:
