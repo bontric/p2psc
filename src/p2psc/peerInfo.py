@@ -46,14 +46,20 @@ class PeerInfo:
             return False
         return time.time() >= self.last_update_t + PeerInfo.NODE_EXPIRY_T
 
-    def subscribes(self, path:str):
+    def subscribes(self, path:str, local_groups:List[str]):
         """
         Returns true if this peer subscribes the given path
         """
 
         # check if group is in path
         group = proto.get_group_from_path(path)
-        if group != proto.ALL_NODES and group not in self.groups:
+        
+        if self.type == PeerType.client:
+            groups = local_groups
+        else:
+            groups = self.groups
+
+        if group != proto.ALL_NODES_GROUP and group not in groups:
             return False
 
         path = proto.remove_group_from_path(path)

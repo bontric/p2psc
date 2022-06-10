@@ -9,6 +9,9 @@ class PeerRegistry:
     def __init__(self, name) -> None:
         self._node_name = name
         self.addr_peer_map = {}  # type: Dict[Tuple, PeerInfo]
+        self._local_groups = [name]
+        self._local_paths = []
+
 
     def get_local_paths(self) -> List[str]:
         """
@@ -30,6 +33,10 @@ class PeerRegistry:
         groups.insert(0, self._node_name) # Insert own name as first element in groups
         return groups
 
+    def _update_local(self):
+        self._local_groups = self.get_local_groups()
+        self._local_paths = self.get_local_paths()
+
     def get_by_type(self, t: PeerType) -> List[PeerInfo]:
         """
         Return all peerinfos with the given type
@@ -41,9 +48,9 @@ class PeerRegistry:
         Return all peerinfos subscribed to the given path
         """
         if filter_type is None:
-            return list(filter(lambda x: x.subscribes(path),  self.addr_peer_map.values()))
+            return list(filter(lambda x: x.subscribes(path, local_groups=self._local_groups),  self.addr_peer_map.values()))
         else:
-            return list(filter(lambda x: x.type == filter_type and x.subscribes(path),  self.addr_peer_map.values()))
+            return list(filter(lambda x: x.type == filter_type and x.subscribes(path, local_groups=self._local_groups),  self.addr_peer_map.values()))
 
     def get_peer(self, addr) -> PeerInfo:
         """
@@ -58,11 +65,13 @@ class PeerRegistry:
         """
         Deletes the PeerInfo for the given address or raises LookupError 
         """
-        if addr in self.addr_peer_map:
-            logging.info(f"REMOVED: Peer {addr} from registry")
-            del self.addr_peer_map[addr]
-        else:
+        if addr not in self.addr_peer_map:
             raise LookupError()
+        
+        logging.info(f"REMOVED: Peer {addr} from registry")
+        del self.addr_peer_map[addr]
+        self._update_local()
+        
 
     def add_peer(self, pi: PeerInfo):
         """
@@ -76,10 +85,7 @@ class PeerRegistry:
             pass
         self.addr_peer_map[pi.addr] = pi
 
-        # Client subscribes all groups this node subscribes
-        # Note: "get_local_groups" will also return the client's own groups here
-        if pi.type == PeerType.client:
-            pi.groups = self.get_local_groups()
+        self._update_local()
 
     def cleanup(self):
         """
