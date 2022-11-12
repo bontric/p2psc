@@ -5,16 +5,17 @@ P2psc {
 	var <>paths;
 	var <>groups;
 	var <>defaultPaths;
-	var <name;
+	var <>name;
+	var >osc_peernames, >osc_say, >osc_hush, >osc_load, >osc_reset;
 
 	*new { | ip="localhost", port=3760, peersInterval=5 |
 		var o = super.new();
 		o.addr = NetAddr.new(ip,port);
 		o.groups = [];
-		o.paths = [];
+		o.paths = Dictionary();
 
 		// Map incoming peernames to peers variable
-		OSCdef.newMatching(\p2psc\peernames, {|msg| o.peers = msg[1].asString.split($ )}, "/p2psc/peernames", o.addr).fix;
+		o.osc_peernames = OSCFunc.newMatching({|msg| o.peers = msg[1].asString.split($ )}, "/p2psc/peernames", o.addr).fix;
 
 		// Request peernames periodically
 		// Note: "asString" required here because the OSC message argument is technically a "Symbol" not a string
@@ -24,18 +25,15 @@ P2psc {
 		// initialize default paths
 		o.defaultPaths = "/say /hush /load /reset";
 		// say: prints a message
-		OSCdef.newMatching(\p2psc\say, {|msg| msg.postln;}, "/say", o.addr).fix;
+		o.osc_say = OSCFunc.newMatching({|msg| msg.postln}, "/say", o.addr).fix;
 		// hush: free a Oscdef
-		OSCdef.newMatching(\p2psc\hush, {|msg| OSCdef(msg[1]).free;}, "/hush", o.addr).fix;
+		o.osc_hush = OSCFunc.newMatching({|msg| o.resetPaths()}, "/hush", o.addr).fix;
 		// load a file from given path
-		OSCdef.newMatching(\p2psc\load, {|msg| PathName.new(msg[1].asString).asAbsolutePath.load;}, "/load", o.addr).fix;
+		o.osc_load = OSCFunc.newMatching({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load", o.addr).fix;
 		// reset/reboot supercollider
-		OSCdef.newMatching(\p2psc\reset, {thisProcess.recompile()}, "/reset", o.addr).fix;
+		o.osc_reset = OSCFunc.newMatching({thisProcess.recompile()}, "/reset", o.addr).fix;
 
-		// TODO use local send or update function!
-		o.addr.sendMsg("/p2psc/peerinfo", 1, "", o.defaultPaths);
-
-		fork{o.getName()};
+		fork{o.update()};
 
 		// return object
 		^o;
@@ -43,16 +41,16 @@ P2psc {
 
 	send { | path...args | addr.sendMsg(path, *args)}
 
-	sendg { | group, path...args | this.send("/" ++ group ++ "/" ++ path, *args) }
+	sendg { | group, path...args | this.send("/" ++ group ++ path, *args) }
 
 	update {
-		var remoteGroups=nil, remotePaths=nil, c = Condition();
+		var remoteGroups=nil, remotePaths=nil, c = Condition(), ofunc;
 
 		// Send node info
-		this.send("/p2psc/peerinfo", 1, groups.join(" "), defaultPaths + paths.join(" "));
+		this.send("/p2psc/peerinfo", 1, groups.join(" "), defaultPaths + paths.keys.asList().join(" "));
 
-		// validate our groups/paths exist
-		OSCdef.newMatching(\p2psc\pi, {|msg|
+		// validates our groups/paths exist
+		ofunc = OSCFunc.newMatching({|msg|
 			var updateFailed = false;
 			remoteGroups = msg[2].asString.split($ );
 			remotePaths = msg[3].asString.split($ );
@@ -61,15 +59,18 @@ P2psc {
 			paths.do{|p| if(remotePaths.indexOfEqual(p) == nil, {updateFailed = true})};
 
 			if (updateFailed, {"P2PSC ERR: peerinfo not synchronized!".postln});
+
+			this.name = remoteGroups[0];
 			c.test=true;
 			c.signal
 		}, "/p2psc/peerinfo", addr);
 
 		this.send("/p2psc/peerinfo");
+
 		fork {
 			c.halt(0.1);
 			if (c.test == false,{"P2PSC ERR: Node is not responding!".postln});
-			OSCdef(\p2psc\pi).free;
+			ofunc.free;
 		}
 	}
 
@@ -77,7 +78,7 @@ P2psc {
 		var c = Condition(false);
 		var rPaths = nil;
 
-		OSCdef.newMatching(\p2psc\paths, {|msg|
+		var ofunc = OSCFunc.newMatching(\p2psc_paths, {|msg|
 			rPaths = msg[2].asString.split($ );
 			c.test = true;
 			c.signal;
@@ -92,30 +93,27 @@ P2psc {
 
 		if (rPaths == nil, {"P2PSC ERR: Node is not responding!"}.postln);
 
-		OSCdef(\p2psc\paths).free; // cleanup
+		ofunc.free; // cleanup
 		^rPaths; // return paths
 	}
 
 	addPath { |path, function|
-		if (paths.indexOfEqual(path) != nil,
-			{OSCdef(path).free},	// remove old OSC def if path exists
-			{paths.add(path)}
+		if (paths.get(path) != nil,
+			{paths.at(path).free}	// free old OSC def if path exists
 		);
 
-		// fix OSC defs to avoid confusion when using cmd+.
-		OSCdef.newMatching(path, function, path, addr).fix;
+		// Note: fix OSC defs to avoid confusion when using cmd+.
+		paths.put(path,
+			OSCdef.newMatching(path, function, path, addr).fix);
 
 		// Synchronize peer info with node
 		this.update();
 	}
 
 	removePath {|path|
-		var index;
-		index = paths.indexOfEqual("/test");
-
-		if ( index != nil, {
-			OSCdef(path).free;
-			paths.removeAt(index);
+		if ( paths.get(path) != nil, {
+			paths.at(path).free;
+			paths.removeAt(path);
 			this.update();
 		},{
 			"P2PSC Info: Trying to remove nonexistent path!".postln;
@@ -123,7 +121,9 @@ P2psc {
 	}
 
 	resetPaths {
-		paths = [];
+		// free old osc functions
+		paths.values.do{|ofunc| ofunc.free};
+		paths = Dictionary();
 		this.update();
 	}
 
@@ -131,7 +131,7 @@ P2psc {
 		var c = Condition(false);
 		var rGroups = nil;
 
-		OSCdef.newMatching(\p2psc\groups, {|msg|
+		var ofunc = OSCFunc.newMatching({|msg|
 			rGroups = msg[1].asString.split($ );
 			c.test = true;
 			c.signal;
@@ -146,7 +146,7 @@ P2psc {
 
 		if (rGroups == nil, {"P2PSC Warning: Node is not responding!".postln});
 
-		OSCdef(\p2psc\groups).free; //cleanup
+		ofunc.free; //cleanup
 		^groups; // return groups
 	}
 
@@ -171,32 +171,16 @@ P2psc {
 		this.update();
 	}
 
-	getName {
-		var c = Condition(false);
-
-		OSCdef.newMatching(\p2psc\name, {|msg|
-			name = msg[1];
-			c.test = true;
-			c.signal;
-		},"/p2psc/name", addr);
-
-		this.send("/p2psc/name");
-		c.hang(0.1);
-
-		if (name == nil, {"P2PSC Warning: Node is not responding!".postln});
-
-		OSCdef(\p2psc\name).free; //cleanup
-		^name; // return groups
-	}
-
 	disconnect {
+		this.resetPaths();
+		this.resetGroups();
 		this.send("/p2psc/disconnect"); // Disconnect from node
 
-		OSCdef(\p2psc\say).free;
-		OSCdef(\p2psc\hush).free;
-		OSCdef(\p2psc\load).free;
-		OSCdef(\p2psc\reset).free;
-		OSCdef(\p2psc\peernames).free;
+		this.osc_peernames.free;
+		this.osc_say.free;
+		this.osc_hush.free;
+		this.osc_load.free;
+		this.osc_reset.free;
 
 		peersRoutine.stop;
 	}
