@@ -97,14 +97,18 @@ P2psc {
 		^rPaths; // return paths
 	}
 
-	addPath { |path, function|
-		if (paths.get(path) != nil,
+	addPath { |path, function, matching=false|
+		if (paths.at(path) != nil,
 			{paths.at(path).free}	// free old OSC def if path exists
 		);
 
 		// Note: fix OSC defs to avoid confusion when using cmd+.
-		paths.put(path,
-			OSCdef.newMatching(path, function, path, addr).fix);
+		if(matching,
+		{paths.put(path,
+				OSCdef.newMatching(path, function, path, addr).fix)},
+		{paths.put(path,
+				OSCdef(path, function, path, addr).fix)}
+		);
 
 		// Synchronize peer info with node
 		this.update();
