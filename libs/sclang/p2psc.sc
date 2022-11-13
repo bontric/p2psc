@@ -75,10 +75,9 @@ P2psc {
 	}
 
 	getPaths { |node=nil|
-		var c = Condition(false);
-		var rPaths = nil;
+		var c = Condition(false), rPaths = nil, ofunc;
 
-		var ofunc = OSCFunc.newMatching(\p2psc_paths, {|msg|
+		ofunc = OSCFunc({|msg|
 			rPaths = msg[2].asString.split($ );
 			c.test = true;
 			c.signal;
