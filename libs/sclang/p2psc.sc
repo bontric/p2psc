@@ -43,8 +43,6 @@ P2psc {
 
 	send { | path...args | addr.sendMsg(path, *args)}
 
-	sendg { | group, path...args | this.send("/" ++ group ++ path, *args) }
-
 	update {
 		var remoteGroups=nil, remotePaths=nil, c = Condition(), ofunc;
 
