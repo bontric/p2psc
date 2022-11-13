@@ -68,7 +68,7 @@ P2psc {
 		this.send("/p2psc/peerinfo");
 
 		fork {
-			c.halt(0.1);
+			c.hang(0.1);
 			if (c.test == false,{"P2PSC ERR: Node is not responding!".postln});
 			ofunc.free;
 		}
