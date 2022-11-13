@@ -56,7 +56,7 @@ P2psc {
 			remotePaths = msg[3].asString.split($ );
 
 			groups.do{|g| if(remoteGroups.indexOfEqual(g) == nil, {updateFailed = true})};
-			paths.do{|p| if(remotePaths.indexOfEqual(p) == nil, {updateFailed = true})};
+			paths.keys.asList().do{|p| if(remotePaths.indexOfEqual(p) == nil, {updateFailed = true})};
 
 			if (updateFailed, {"P2PSC ERR: peerinfo not synchronized!".postln});
 
