@@ -8,20 +8,24 @@ P2psc {
 	var <>name;
 	var >osc_peernames, >osc_say, >osc_hush, >osc_load, >osc_reset;
 
-	*new { | ip="localhost", port=3760, peersInterval=5 |
+	*new { | ip="localhost", port=3760, peersInterval=5, autoUpdatePeernames=true |
 		var o = super.new();
 		o.addr = NetAddr.new(ip,port);
 		o.groups = [];
 		o.paths = Dictionary();
 
-		// Map incoming peernames to peers variable
-		// Note: "asString" required here because the OSC message argument is technically a "Symbol"
-		// not a string. The .split($ ) is another speciality, where "$ " references a "space"
-		o.osc_peernames = OSCFunc(
-			{|msg| o.peers = msg[1].asString.split($ )},"/p2psc/peernames", o.addr).fix;
+		if(autoUpdatePeernames,
+			{
+				// Map incoming peernames to peers variable
+				// Note: "asString" required here because the OSC message argument is technically a "Symbol"
+				// not a string. The .split($ ) is another speciality, where "$ " references a "space"
+				o.osc_peernames = OSCFunc(
+					{|msg| o.peers = msg[1].asString.split($ )},"/p2psc/peernames", o.addr).fix;
 
-		// Request peernames periodically
-		o.peersRoutine = {loop{o.addr.sendMsg("/p2psc/peernames"); peersInterval.sleep}}.fork;
+				// Request peernames periodically
+				o.peersRoutine = {loop{o.addr.sendMsg("/p2psc/peernames"); peersInterval.sleep}}.fork;
+			}
+		);
 
 		// initialize default paths
 		o.defaultPaths = "/say /hush /load /reset";
