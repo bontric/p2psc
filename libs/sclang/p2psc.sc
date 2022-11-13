@@ -15,23 +15,25 @@ P2psc {
 		o.paths = Dictionary();
 
 		// Map incoming peernames to peers variable
-		o.osc_peernames = OSCFunc.newMatching({|msg| o.peers = msg[1].asString.split($ )}, "/p2psc/peernames", o.addr).fix;
+		// Note: "asString" required here because the OSC message argument is technically a "Symbol"
+		// not a string. The .split($ ) is another speciality, where "$ " references a "space"
+		o.osc_peernames = OSCFunc(
+			{|msg| o.peers = msg[1].asString.split($ )},"/p2psc/peernames", o.addr).fix;
 
 		// Request peernames periodically
-		// Note: "asString" required here because the OSC message argument is technically a "Symbol" not a string
-		// The .split($ ) is another speciality, where "$ " references a "space"
 		o.peersRoutine = {loop{o.addr.sendMsg("/p2psc/peernames"); peersInterval.sleep}}.fork;
 
 		// initialize default paths
 		o.defaultPaths = "/say /hush /load /reset";
 		// say: prints a message
-		o.osc_say = OSCFunc.newMatching({|msg| msg.postln}, "/say", o.addr).fix;
+		o.osc_say = OSCFunc({|msg| msg.postln;}, "/say", o.addr).fix;
 		// hush: free a Oscdef
-		o.osc_hush = OSCFunc.newMatching({|msg| o.resetPaths()}, "/hush", o.addr).fix;
+		o.osc_hush = OSCFunc({|msg| o.resetPaths()}, "/hush", o.addr).fix;
 		// load a file from given path
-		o.osc_load = OSCFunc.newMatching({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load", o.addr).fix;
+		o.osc_load = OSCFunc(
+			{|msg| PathName.new(msg[1].asString).asAbsolutePath.load},"/load", o.addr).fix;
 		// reset/reboot supercollider
-		o.osc_reset = OSCFunc.newMatching({thisProcess.recompile()}, "/reset", o.addr).fix;
+		o.osc_reset = OSCFunc({thisProcess.recompile()}, "/reset", o.addr).fix;
 
 		fork{o.update()};
 
@@ -50,7 +52,7 @@ P2psc {
 		this.send("/p2psc/peerinfo", 1, groups.join(" "), defaultPaths + paths.keys.asList().join(" "));
 
 		// validates our groups/paths exist
-		ofunc = OSCFunc.newMatching({|msg|
+		ofunc = OSCFunc({|msg|
 			var updateFailed = false;
 			remoteGroups = msg[2].asString.split($ );
 			remotePaths = msg[3].asString.split($ );
@@ -132,10 +134,9 @@ P2psc {
 	}
 
 	getGroups { |node=nil|
-		var c = Condition(false);
-		var rGroups = nil;
+		var c = Condition(false), rGroups = nil, ofunc;
 
-		var ofunc = OSCFunc.newMatching({|msg|
+		ofunc = OSCFunc({|msg|
 			rGroups = msg[1].asString.split($ );
 			c.test = true;
 			c.signal;
