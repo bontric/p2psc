@@ -6,7 +6,7 @@ P2psc {
 	var <>groups;
 	var <>defaultPaths;
 	var <>name;
-	var >osc_peernames, >osc_say, >osc_hush, >osc_load, >osc_reset;
+	var <>osc_peernames, <>osc_say, <>osc_hush, <>osc_load, <>osc_reset;
 
 	*new { | ip="localhost", port=3760, peersInterval=5, autoUpdatePeernames=true |
 		var o = super.new();
