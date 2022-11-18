@@ -118,7 +118,7 @@ P2psc {
 	}
 
 	removePath {|path|
-		if ( paths.get(path) != nil, {
+		if ( paths.at(path) != nil, {
 			paths.at(path).free;
 			paths.removeAt(path);
 			this.update();
