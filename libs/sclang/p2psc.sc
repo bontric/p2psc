@@ -93,8 +93,7 @@ P2psc {
 		);
 
 		c.hang(0.1);
-
-		if (rPaths == nil, {"P2PSC ERR: Node is not responding!"}.postln);
+		if (rPaths == nil, {"P2PSC ERR: Node is not responding!".postln});
 
 		ofunc.free; // cleanup
 		^rPaths; // return paths
