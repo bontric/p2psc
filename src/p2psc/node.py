@@ -18,12 +18,12 @@ from p2psc import proto
 class Node(OscHandler):
     def __init__(self, config: Config) -> None:
         self._registry = PeerRegistry(config["name"])
-        self._name = config["name"]
         self._addr = (config["ip"], config["port"])
         self._running = False
         self._transport = None  # type: asyncio.DatagramTransport
         self._protocol = None  # type: OscProtocolUdp
         self._loop_task = None
+        self._config = config
 
         self._loop = asyncio.get_event_loop()
 
@@ -162,7 +162,7 @@ class Node(OscHandler):
         elif message.address == proto.GET_PATHS:
             if len(message.params) == 0:
                 paths = proto.list_to_str(self._registry._local_paths)
-                msg = proto.osc_dgram(proto.GET_PATHS, [self._name, paths])
+                msg = proto.osc_dgram(proto.GET_PATHS, [self._registry._node_name, paths])
                 self._transport.sendto(msg, addr)
                 return
             if len(message.params) > 1 or type(message.params[0]) != str:
@@ -177,12 +177,18 @@ class Node(OscHandler):
                     msg = proto.osc_dgram(proto.GET_PATHS, [pi.groups[0], paths])
                     self._transport.sendto(msg, addr)
         elif message.address == proto.NODENAME:
-            if len(message.params) != 0:
+            if len(message.params) > 1:
                 logging.warning(
                     f"Received Invalid Message from {addr}: {message.address}, {message.params}")
-                return
-            msg = proto.osc_dgram(proto.NODENAME, [self._name])
-            self._transport.sendto(msg, addr)
+            elif len(message.params) == 0:
+                msg = proto.osc_dgram(proto.NODENAME, [self._registry._node_name])
+                self._transport.sendto(msg, addr)
+            else:
+                if message.params[0] == "":
+                    self._registry.set_name(self._config["name"])
+                else:
+                    self._registry.set_name(message.params[0])
+
         elif message.address == proto.PEERNAMES:
             if len(message.params) != 0:
                 logging.warning(

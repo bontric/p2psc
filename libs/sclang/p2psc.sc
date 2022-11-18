@@ -64,6 +64,9 @@ P2psc {
 
 			if (updateFailed, {"P2PSC ERR: peerinfo not synchronized!".postln});
 
+			if (this.name != nil && this.name != remoteGroups[0],
+				{"P2PSC Info: Name Changed to:"+ remoteGroups[0]});
+
 			this.name = remoteGroups[0];
 			c.test=true;
 			c.signal
@@ -173,6 +176,18 @@ P2psc {
 
 	resetGroups {
 		groups = [];
+		this.update();
+	}
+
+	setName { |name|
+		this.name = name;
+		this.send("/p2psc/name", name);
+		this.update();
+	}
+
+	resetName { |name|
+		this.name = nil;
+		this.send("/p2psc/name", "");
 		this.update();
 	}
 

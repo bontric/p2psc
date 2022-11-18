@@ -95,3 +95,7 @@ class PeerRegistry:
             if pi.is_expired():
                 logging.info(f"EXPIRED: Removing Peer {pi.addr} from registry")
                 del self.addr_peer_map[pi.addr]
+
+    def set_name(self, name:str):
+        self._node_name = name
+        self._update_local()
