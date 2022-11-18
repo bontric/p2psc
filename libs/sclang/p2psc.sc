@@ -153,7 +153,7 @@ P2psc {
 		if (rGroups == nil, {"P2PSC Warning: Node is not responding!".postln});
 
 		ofunc.free; //cleanup
-		^groups; // return groups
+		^rGroups; // return groups
 	}
 
 	addGroup { |group|
