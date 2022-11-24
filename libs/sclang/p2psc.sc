@@ -20,7 +20,7 @@ P2psc {
 				// Note: "asString" required here because the OSC message argument is technically a "Symbol"
 				// not a string. The .split($ ) is another speciality, where "$ " references a "space"
 				o.osc_peernames = OSCFunc(
-					{|msg| o.peers = msg[1].asString.split($ )},"/p2psc/peernames", o.addr).fix;
+					{|msg| o.peers = msg[1].asString.split($ )},"/p2psc/peernames", o.addr);
 
 				// Request peernames periodically
 				o.peersRoutine = {loop{o.addr.sendMsg("/p2psc/peernames"); peersInterval.sleep}}.fork;
@@ -30,16 +30,17 @@ P2psc {
 		// initialize default paths
 		o.defaultPaths = "/say /hush /load /reset";
 		// say: prints a message
-		o.osc_say = OSCFunc({|msg| msg.postln;}, "/say", o.addr).fix;
+		o.osc_say = OSCFunc({|msg| msg.postln;}, "/say", o.addr);
 		// hush: free a Oscdef
-		o.osc_hush = OSCFunc({|msg| o.resetPaths()}, "/hush", o.addr).fix;
+		o.osc_hush = OSCFunc({|msg| o.resetPaths()}, "/hush", o.addr);
 		// load a file from given path
 		o.osc_load = OSCFunc(
-			{|msg| PathName.new(msg[1].asString).asAbsolutePath.load},"/load", o.addr).fix;
+			{|msg| PathName.new(msg[1].asString).asAbsolutePath.load},"/load", o.addr);
 		// reset/reboot supercollider
-		o.osc_reset = OSCFunc({thisProcess.recompile()}, "/reset", o.addr).fix;
+		o.osc_reset = OSCFunc({thisProcess.recompile()}, "/reset", o.addr);
 
-		fork{o.update()};
+
+		CmdPeriod.doOnce({o.disconnect});
 
 		// return object
 		^o;
@@ -110,9 +111,9 @@ P2psc {
 		// Note: fix OSC defs to avoid confusion when using cmd+.
 		if(matching,
 		{paths.put(path,
-				OSCdef.newMatching(path, function, path, addr).fix)},
+				OSCdef.newMatching(path, function, path, addr))},
 		{paths.put(path,
-				OSCdef(path, function, path, addr).fix)}
+				OSCdef(path, function, path, addr))}
 		);
 
 		// Synchronize peer info with node
