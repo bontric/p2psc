@@ -39,6 +39,7 @@ P2psc {
 		// reset/reboot supercollider
 		o.osc_reset = OSCFunc({thisProcess.recompile()}, "/reset", o.addr);
 
+		o.update();
 
 		CmdPeriod.doOnce({o.disconnect});
 
@@ -73,9 +74,8 @@ P2psc {
 			c.signal
 		}, "/p2psc/peerinfo", addr);
 
-		this.send("/p2psc/peerinfo");
-
 		fork {
+			this.send("/p2psc/peerinfo");
 			c.hang(0.1);
 			if (c.test == false,{"P2PSC ERR: Node is not responding!".postln});
 			ofunc.free;
