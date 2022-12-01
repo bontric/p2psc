@@ -31,6 +31,16 @@ class Node(OscHandler):
         if self._enable_zeroconf:
             self._zconf = NodeZconf(self._addr, self._zconf_node_callback)
 
+        self._osc_handlers = {
+            proto.PEERINFO: self.__osc_peerinfo,        
+            proto.PEERINFOS: self.__osc_peerinfo,        
+            proto.DISCONNECT: self.__osc_disconnect,        
+            proto.GET_PATHS: self.__osc_get_paths,        
+            proto.NODENAME: self.__osc_nodename,        
+            proto.PEERNAMES: self.__osc_peernames,        
+            proto.GROUPS: self.__osc_groups,
+        }
+
     async def serve(self):
         if self._loop_task is not None:
             logging.warning("Registry already running!")
@@ -84,7 +94,7 @@ class Node(OscHandler):
 
     def _zconf_node_callback(self, addr: Union[Tuple[str, int], None], state: zeroconf.ServiceStateChange):
         """
-        Called by Zeroconf when a service changed state
+        Called by Zeroconf when a MDNS service changed state
         """
         if state == zeroconf.ServiceStateChange.Removed:
             try:
@@ -135,87 +145,98 @@ class Node(OscHandler):
             for pi in self._registry.get_by_path(message.address, filter_type=PeerType.client):
                 self._transport.sendto(m, pi.addr)
 
+    def __osc_peerinfo(self, addr, message: OscMessage):
+        if len(message.params) == 0:
+            logging.debug(f"Peer {addr} requested info")
+            self._transport.sendto(self._get_peerinfo_msg(), addr)
+            return
+        if not proto.is_valid_peerinfo(message.params):
+            logging.warning(
+                f"Received invalid peerinfo from {addr}: {message.params}")
+            return
+        self._registry.add_peer(PeerInfo.from_osc(addr, message.params))
+    
+    def __osc_peerinfos(self, addr, message: OscMessage):
+        bb = OscBundleBuilder(IMMEDIATELY)
+        for pi in self._registry.get_by_type(PeerType.node):
+            bb.add_content(proto.osc_message(proto.PEERINFO, pi.as_osc()))
+        self._transport.sendto(bb.build().dgram, addr)
+
+    def __osc_disconnect(self,addr, message: OscMessage):
+        try:
+            self._registry.remove_peer(addr)
+        except LookupError:
+            logging.warning(f"DISCONNECT request from unregistered peer: {addr}")
+    
+    def __osc_get_paths(self,addr, message: OscMessage):
+        if len(message.params) == 0:
+            paths = proto.list_to_str(self._registry._local_paths)
+            msg = proto.osc_dgram(proto.GET_PATHS, [self._registry._node_name, paths])
+            self._transport.sendto(msg, addr)
+            return
+        if len(message.params) > 1 or type(message.params[0]) != str:
+            logging.warning(
+                f"Received Invalid Message from {addr}: {message.address}, {message.params}")
+            return
+        for pi in self._registry.get_by_type(PeerType.node):
+            if len(pi.groups) < 1:
+                continue
+            if message.params[0] == pi.groups[0]:
+                paths = proto.list_to_str(pi.paths)
+                msg = proto.osc_dgram(proto.GET_PATHS, [pi.groups[0], paths])
+                self._transport.sendto(msg, addr)
+
+    def __osc_nodename(self, addr, message: OscMessage):
+        if len(message.params) > 1:
+            logging.warning(
+                f"Received Invalid Message from {addr}: {message.address}, {message.params}")
+        elif len(message.params) == 0:
+            msg = proto.osc_dgram(proto.NODENAME, [self._registry._node_name])
+            self._transport.sendto(msg, addr)
+        else:
+            if message.params[0] == "":
+                self._registry.set_name(self._config["name"])
+            else:
+                self._registry.set_name(message.params[0])
+
+    def __osc_peernames(self, addr, message: OscMessage):
+        if len(message.params) != 0:
+            logging.warning(
+                f"Received Invalid Message from {addr}: {message.address}, {message.params}")
+            return
+        names = []
+        for pi in self._registry.get_by_type(PeerType.node):
+            if len(pi.groups) > 0:
+                names.append(pi.groups[0])
+
+        msg = proto.osc_dgram(proto.PEERNAMES, [proto.list_to_str(names)])
+        self._transport.sendto(msg, addr)
+
+    def __osc_groups(self, addr, message: OscMessage):
+        if len(message.params) == 0:
+            groups = self._registry._local_groups
+            msg = proto.osc_dgram(proto.GROUPS, [proto.list_to_str(groups)])
+            self._transport.sendto(msg, addr)
+            return
+        if len(message.params) > 1 or type(message.params[0]) != str:
+            logging.warning(
+                f"Received Invalid Message from {addr}: {message.address}, {message.params}")
+            return
+
+        for pi in self._registry.get_by_type(PeerType.node):
+            if len(pi.groups) < 1:
+                continue
+            if message.params[0] == pi.groups[0]:
+                msg = proto.osc_dgram(proto.GROUPS, [proto.list_to_str(pi.groups)])
+                self._transport.sendto(msg, addr)
+
     def _handle_local(self, addr, message: OscMessage):
         """
         Handles OSC messages for local node
         """
-        if message.address == proto.PEERINFO:
-            if len(message.params) == 0:
-                logging.debug(f"Peer {addr} requested info")
-                self._transport.sendto(self._get_peerinfo_msg(), addr)
-                return
-            if not proto.is_valid_peerinfo(message.params):
-                logging.warning(
-                    f"Received invalid peerinfo from {addr}: {message.params}")
-                return
-            self._registry.add_peer(PeerInfo.from_osc(addr, message.params))
-        elif message.address == proto.PEERINFOS:
-            bb = OscBundleBuilder(IMMEDIATELY)
-            for pi in self._registry.get_by_type(PeerType.node):
-                bb.add_content(proto.osc_message(proto.PEERINFO, pi.as_osc()))
-            self._transport.sendto(bb.build().dgram, addr)
-        elif message.address == proto.DISCONNECT:
-            try:
-                self._registry.remove_peer(addr)
-            except LookupError:
-                logging.warning(f"DISCONNECT request from unregistered peer: {addr}")
-        elif message.address == proto.GET_PATHS:
-            if len(message.params) == 0:
-                paths = proto.list_to_str(self._registry._local_paths)
-                msg = proto.osc_dgram(proto.GET_PATHS, [self._registry._node_name, paths])
-                self._transport.sendto(msg, addr)
-                return
-            if len(message.params) > 1 or type(message.params[0]) != str:
-                logging.warning(
-                    f"Received Invalid Message from {addr}: {message.address}, {message.params}")
-                return
-            for pi in self._registry.get_by_type(PeerType.node):
-                if len(pi.groups) < 1:
-                    continue
-                if message.params[0] == pi.groups[0]:
-                    paths = proto.list_to_str(pi.paths)
-                    msg = proto.osc_dgram(proto.GET_PATHS, [pi.groups[0], paths])
-                    self._transport.sendto(msg, addr)
-        elif message.address == proto.NODENAME:
-            if len(message.params) > 1:
-                logging.warning(
-                    f"Received Invalid Message from {addr}: {message.address}, {message.params}")
-            elif len(message.params) == 0:
-                msg = proto.osc_dgram(proto.NODENAME, [self._registry._node_name])
-                self._transport.sendto(msg, addr)
-            else:
-                if message.params[0] == "":
-                    self._registry.set_name(self._config["name"])
-                else:
-                    self._registry.set_name(message.params[0])
+        try:
+            self._osc_handlers[message.address](addr, message)
+        except KeyError:
+            logging.info("Received Message with p2psc prefix but unknown path!")
 
-        elif message.address == proto.PEERNAMES:
-            if len(message.params) != 0:
-                logging.warning(
-                    f"Received Invalid Message from {addr}: {message.address}, {message.params}")
-                return
-            names = []
-            for pi in self._registry.get_by_type(PeerType.node):
-                if len(pi.groups) > 0:
-                    names.append(pi.groups[0])
-
-            msg = proto.osc_dgram(proto.PEERNAMES, [proto.list_to_str(names)])
-            self._transport.sendto(msg, addr)
-        if message.address == proto.GROUPS:
-            if len(message.params) == 0:
-                groups = self._registry._local_groups
-                msg = proto.osc_dgram(proto.GROUPS, [proto.list_to_str(groups)])
-                self._transport.sendto(msg, addr)
-                return
-            if len(message.params) > 1 or type(message.params[0]) != str:
-                logging.warning(
-                    f"Received Invalid Message from {addr}: {message.address}, {message.params}")
-                return
-
-            for pi in self._registry.get_by_type(PeerType.node):
-                if len(pi.groups) < 1:
-                    continue
-                if message.params[0] == pi.groups[0]:
-                    msg = proto.osc_dgram(proto.GROUPS, [proto.list_to_str(pi.groups)])
-                    self._transport.sendto(msg, addr)
             
