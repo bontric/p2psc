@@ -1,41 +1,23 @@
 P2PSC {
-	var <>addr;
-	var <>peersRoutine;
-	var <>paths;
-	var <>groups;
-	var <>defaultPaths;
-	var <>name;
-	var <>osc_peernames, <>osc_say, <>osc_hush, <>osc_load, <>osc_reset;
-	var <>synclock;
+	var addr;
+	var <paths;
+	var <groups;
+	var <name;
+	var synclock;
 
 	*new { | ip="localhost", port=3760 |
-		var o = super.new();
-		o.addr = NetAddr.new(ip,port);
-		o.groups = [];
-		o.paths = Dictionary();
-		o.synclock = Semaphore(1);
+		var o = super.newCopyArgs(NetAddr.new(ip,port), Dictionary(), [], nil, Semaphore(1));
 
-		// initialize default paths
-		o.defaultPaths = "/say /hush /load /reset";
-		// say: prints a message
-		o.osc_say = OSCFunc({|msg| msg.postln;}, "/say", o.addr);
-		// hush: free a Oscdef
-		o.osc_hush = OSCFunc({|msg| o.resetPaths()}, "/hush", o.addr);
-		// load a file from given path
-		o.osc_load = OSCFunc(
-			{|msg| PathName.new(msg[1].asString).asAbsolutePath.load},"/load", o.addr);
-		// reset/reboot supercollider
-		o.osc_reset = OSCFunc({thisProcess.recompile()}, "/reset", o.addr);
-
+		o.resetPaths(); // set default paths
 		o.update();
 
-		//CmdPeriod.doOnce({o.disconnect});
+		CmdPeriod.doOnce({o.disconnect});
 
 		// return object
 		^o;
 	}
 
-	send { | path...args | addr.sendMsg(path, *args)}
+	sendMsg { | path...args | addr.sendMsg(path, *args)}
 
 	update {
 		fork {
@@ -44,7 +26,7 @@ P2PSC {
 			synclock.wait;
 
 			// Send node info
-			this.send("/p2psc/peerinfo", 1, groups.join(" "), defaultPaths + paths.keys.asList().join(" "));
+			this.sendMsg("/p2psc/peerinfo", 1, groups.join(" "), paths.keys.asList().join(" "));
 
 			// validates our groups/paths exist
 			ofunc = OSCFunc({|msg|
@@ -57,15 +39,15 @@ P2PSC {
 
 				if (updateFailed, {"ERROR (P2PSC):: peerinfo not synchronized!".postln});
 
-				if (this.name != nil && this.name != remoteGroups[0],
+				if (name != nil && name != remoteGroups[0],
 					{"P2PSC Info: Name Changed to:"+ remoteGroups[0]});
 
-				this.name = remoteGroups[0];
+				name = remoteGroups[0];
 				c.test=true;
 				c.signal
 			}, "/p2psc/peerinfo", addr);
 
-			this.send("/p2psc/peerinfo");
+			this.sendMsg("/p2psc/peerinfo");
 			c.hang(0.1);
 
 			if (c.test == false,{"ERROR (P2PSC):: Node is not responding!".postln});
@@ -85,7 +67,7 @@ P2PSC {
 			c.signal;
 		},"/p2psc/peernames", addr);
 
-		this.send("/p2psc/peernames");
+		this.sendMsg("/p2psc/peernames");
 		c.hang(0.1);
 
 		if (rPeers == nil, {"ERROR (P2PSC):: Node is not responding!".postln});
@@ -93,10 +75,10 @@ P2PSC {
 		ofunc.free; // cleanup
 		synclock.signal;
 
-		^rPeers; // return paths
+		^(rPeers.sort); // return paths
 	}
 
-	getPaths { |node=nil|
+	getPaths { |peer=nil|
 		var c = Condition(false), rPaths = nil, ofunc;
 
 		synclock.wait;
@@ -106,21 +88,21 @@ P2PSC {
 			c.signal;
 		},"/p2psc/paths", addr);
 
-		if (node == nil,
-			{this.send("/p2psc/paths")},
-			{this.send("/p2psc/paths", node)}
+		if (peer == nil,
+			{this.sendMsg("/p2psc/paths")},
+			{this.sendMsg("/p2psc/paths", peer)}
 		);
 
 		c.hang(0.1);
-		if (rPaths == nil, {"ERROR (P2PSC):: Node is not responding!".postln});
+		if (rPaths == nil, {"ERROR (P2PSC):: Peer is not responding!".postln});
 
 		ofunc.free; // cleanup
 		synclock.signal;
 
-		^rPaths; // return paths
+		^(rPaths.sort); // return paths
 	}
 
-	addPath { |path, function, matching=false|
+	addPath { |function, path, matching=false|
 		if (paths.at(path) != nil,
 			{paths.at(path).free}	// free old OSC def if path exists
 		);
@@ -151,10 +133,21 @@ P2PSC {
 		// free old osc functions
 		paths.values.do{|ofunc| ofunc.free};
 		paths = Dictionary();
-		this.update();
+
+		// say: Prints the meassage
+		this.addPath({|msg| msg.postln}, "/say");
+
+		// hush: Frees all OSCdefs
+		this.addPath({|msg| this.resetPaths()}, "/hush");
+
+		// load: Loads a file from given path
+		this.addPath({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load");
+
+		// reset: Recompile class interpreter
+		this.addPath({thisProcess.recompile()}, "/reset");
 	}
 
-	getGroups { |node=nil|
+	getGroups { |peer=nil|
 		var c = Condition(false), rGroups = nil, ofunc;
 		synclock.wait;
 
@@ -164,9 +157,9 @@ P2PSC {
 			c.signal;
 		},"/p2psc/groups", addr);
 
-		if (node == nil,
-			{this.send("/p2psc/groups")},
-			{this.send("/p2psc/groups", node)}
+		if (peer == nil,
+			{this.sendMsg("/p2psc/groups")},
+			{this.sendMsg("/p2psc/groups", peer)}
 		);
 
 		c.hang(0.1);
@@ -176,7 +169,7 @@ P2PSC {
 		ofunc.free; //cleanup
 		synclock.signal;
 
-		^rGroups; // return groups
+		^(rGroups.sort); // return groups
 	}
 
 	addGroup { |group|
@@ -201,28 +194,20 @@ P2PSC {
 	}
 
 	setName { |name|
-		this.name = name;
-		this.send("/p2psc/name", name);
+		name = name;
+		this.sendMsg("/p2psc/name", name);
 		this.update();
 	}
 
-	resetName { |name|
-		this.name = nil;
-		this.send("/p2psc/name", "");
+	resetName {
+		name = nil;
+		this.sendMsg("/p2psc/name", "");
 		this.update();
 	}
 
 	disconnect {
 		this.resetPaths();
 		this.resetGroups();
-		this.send("/p2psc/disconnect"); // Disconnect from node
-
-		this.osc_peernames.free;
-		this.osc_say.free;
-		this.osc_hush.free;
-		this.osc_load.free;
-		this.osc_reset.free;
-
-		peersRoutine.stop;
+		this.sendMsg("/p2psc/disconnect"); // Disconnect from node
 	}
 }
