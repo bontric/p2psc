@@ -1,0 +1,215 @@
+TITLE:: P2PSC
+summary:: (Helper class to interact with p2psc node via OSC)
+categories:: External Control
+related:: Classes/NetAddr, Classes/OSCFunc
+
+DESCRIPTION::
+This is a helper class for interacting with a local p2psc node via OSC.
+This class requires a p2psc node running (usually on your local machine).
+See (https://github.com/bontric/p2psc) for more information regarding the p2psc node.
+
+By default this class registers some OSC functions:
+
+code::
+		// say: Prints the meassage
+		this.addPath({|msg| msg.postln}, "/say");
+
+		// hush: Frees all OSCdefs
+		this.addPath({|msg| this.resetPaths()}, "/hush");
+
+		// load: Loads a file from given path
+		this.addPath({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load");
+
+		// reset: Recompile class interpreter
+		this.addPath({thisProcess.recompile()}, "/reset");
+::
+
+
+CLASSMETHODS::
+
+METHOD:: new
+Creates a new instance of P2PSC
+
+ARGUMENT:: ip
+IP address of the node as a string (Default:localhost)
+
+ARGUMENT:: port
+Port of the node (Default:3760)
+
+returns:: A P2PSC object
+
+
+INSTANCEMETHODS::
+
+METHOD:: getPeers
+    Get peer names as a list of strings. 
+
+    Note: this function MUST be called within a routine, since it communicates with the p2psc node and waits for a response.
+
+    returns:: A list of strings representing peer names currently available in the network.
+
+METHOD:: getPaths
+    Get all paths for the local p2psc node or a peer. 
+
+    Note: this function MUST be called within a routine, since it communicates with the p2psc node and waits for a response.
+
+    ARGUMENT:: peer
+    If present, request this peers path's. Otherwise the local paths are returned.
+
+    returns:: List of strings representing OSC paths subscribed by given peer.
+
+METHOD:: addPath
+Add a OSC path to the local and node registry.
+
+    ARGUMENT:: function
+    A function to call when a message for the given path is received. The arument for this function is a list of path and arguments. (So the first element of this list is the path and all following elements are the arguments)
+
+    code::
+    p = P2PSC();
+    p.addPath({
+        arg msg;
+        var path = msg[0];
+        var osc_arguments = msg.copyToEnd(1);
+        path.postln;
+        osc_arguments.postln;
+    },"/test");
+    ::
+
+
+    ARGUMENT:: path
+    OSC path
+
+    ARGUMENT:: matching
+    If matching is set to true, you can register a path containing simple regular expressions.
+    For example you could set path to "/test*" and your function will match any path beginning with "/test".
+
+    METHOD:: paths
+    returns:: A Dictionary with paths as keys and associated OSCFunc as value
+
+
+METHOD:: resetPaths
+    Remove all paths registered by this instance of P2PSC.
+
+METHOD:: removePath
+    Remove given path. Deletes local OSCFunc and removes registry entry at local node.
+
+    ARGUMENT:: path
+    Path which should be removed
+
+METHOD:: getGroups
+    Get groups of the local node or a peer.
+
+    Note: this function MUST be called within a routine, since it communicates with the p2psc node and waits for a response.
+
+    ARGUMENT:: peer
+    If peer is nil, the call returns the groups of the local node. Otherwise groups of the given peer (if it exists) are returned. 
+
+    returns:: List of groups for local node or peer.
+
+METHOD:: addGroup
+    Add a group to your local p2psc node. All messsages sent to this group will also be sent to you (if you subscribe the path). 
+
+    ARGUMENT:: group
+    Group you want to add.
+
+METHOD:: removeGroup
+    Remove given group at local node.
+
+    ARGUMENT:: group
+    Group which should be removed
+
+METHOD:: resetGroups
+    Remove all groups set by this P2PSC instance from the local node.
+
+METHOD:: groups
+    A list of the local groups (All groups added locally by addGroup)
+
+METHOD:: sendMsg
+    Send a OSC message to the p2psc node.
+
+    ARGUMENT:: path
+    OSC path
+
+    ARGUMENT::  ... args
+    An arbitrary number of arguments which are added to the OSC message.
+
+METHOD:: setName
+    Set the local p2psc node's name
+
+    ARGUMENT:: name
+    Name which should be set
+
+METHOD:: update
+    Used internally to Synchronize information between p2psc node and P2PSC class instance.
+
+METHOD:: resetName
+    Reset the name to the name set in the p2psc node's config
+
+METHOD:: name
+    Your local node's name.
+
+METHOD:: disconnect
+    Disconnect from your local p2psc node
+
+EXAMPLES::
+code::
+(
+// Note: A p2psc instnance must be running on your local machine with the default port (3760) for this to work.
+// See (https://github.com/bontric/p2psc) for more information 
+{
+	var paths,groups,oname;
+
+	p = P2PSC();
+	0.1.sleep();
+
+	// Add Group
+	p.addGroup("test");
+	0.1.sleep();
+
+	groups = p.getGroups();
+	if (groups[1] != "test", {"ERROR: AddGroup failed!".postln; groups.postln});
+
+	// Remove Group
+	p.removeGroup("test");
+	0.1.sleep();
+	groups = p.getGroups();
+	if (groups.size != 1, {"ERROR: RemoveGroup failed!".postln; groups.postln});
+
+	// Add Path
+	p.addPath({}, "/test");
+	0.1.sleep();
+
+	paths = p.getPaths();
+	if (paths != ["/hush", "/load", "/reset", "/say", "/test"], {"ERROR: addPath failed!".postln; paths.postln});
+
+	// Remove Path
+	p.removePath("/test");
+	0.1.sleep();
+	paths = p.getPaths();
+	if (paths != ["/hush", "/load", "/reset", "/say"], {"ERROR: RemovePaths failed!".postln; paths.postln });
+
+	// Set Name
+	if(p.name == nil,{ "ERROR: Name not initialized".postln});
+
+	oname = p.name;
+	p.setName("blabla");
+	0.1.sleep();
+	if(p.name != "blabla",{ "ERROR: Name not updated".postln; p.name});
+	p.resetName();
+	0.1.sleep();
+	if(p.name != oname,{ "ERROR: Name not reset".postln; p.name});
+
+	// Get Peers
+	p.getPeers().postln;
+
+    // Reset/Disconnect
+	p.resetGroups();
+	p.resetPaths();
+	p.resetName();
+
+	p.disconnect();
+	"Done!".postln;
+
+}.fork;
+)
+::
