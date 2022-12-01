@@ -1,31 +1,19 @@
-P2psc {
+P2PSC {
 	var <>addr;
-	var <>peers;
 	var <>peersRoutine;
 	var <>paths;
 	var <>groups;
 	var <>defaultPaths;
 	var <>name;
 	var <>osc_peernames, <>osc_say, <>osc_hush, <>osc_load, <>osc_reset;
+	var <>synclock;
 
-	*new { | ip="localhost", port=3760, peersInterval=5, autoUpdatePeernames=true |
+	*new { | ip="localhost", port=3760 |
 		var o = super.new();
 		o.addr = NetAddr.new(ip,port);
 		o.groups = [];
 		o.paths = Dictionary();
-
-		if(autoUpdatePeernames,
-			{
-				// Map incoming peernames to peers variable
-				// Note: "asString" required here because the OSC message argument is technically a "Symbol"
-				// not a string. The .split($ ) is another speciality, where "$ " references a "space"
-				o.osc_peernames = OSCFunc(
-					{|msg| o.peers = msg[1].asString.split($ )},"/p2psc/peernames", o.addr);
-
-				// Request peernames periodically
-				o.peersRoutine = {loop{o.addr.sendMsg("/p2psc/peernames"); peersInterval.sleep}}.fork;
-			}
-		);
+		o.synclock = Semaphore(1);
 
 		// initialize default paths
 		o.defaultPaths = "/say /hush /load /reset";
@@ -41,7 +29,7 @@ P2psc {
 
 		o.update();
 
-		CmdPeriod.doOnce({o.disconnect});
+		//CmdPeriod.doOnce({o.disconnect});
 
 		// return object
 		^o;
@@ -50,41 +38,68 @@ P2psc {
 	send { | path...args | addr.sendMsg(path, *args)}
 
 	update {
-		var remoteGroups=nil, remotePaths=nil, c = Condition(), ofunc;
-
-		// Send node info
-		this.send("/p2psc/peerinfo", 1, groups.join(" "), defaultPaths + paths.keys.asList().join(" "));
-
-		// validates our groups/paths exist
-		ofunc = OSCFunc({|msg|
-			var updateFailed = false;
-			remoteGroups = msg[2].asString.split($ );
-			remotePaths = msg[3].asString.split($ );
-
-			groups.do{|g| if(remoteGroups.indexOfEqual(g) == nil, {updateFailed = true})};
-			paths.keys.asList().do{|p| if(remotePaths.indexOfEqual(p) == nil, {updateFailed = true})};
-
-			if (updateFailed, {"P2PSC ERR: peerinfo not synchronized!".postln});
-
-			if (this.name != nil && this.name != remoteGroups[0],
-				{"P2PSC Info: Name Changed to:"+ remoteGroups[0]});
-
-			this.name = remoteGroups[0];
-			c.test=true;
-			c.signal
-		}, "/p2psc/peerinfo", addr);
-
 		fork {
+			var remoteGroups=nil, remotePaths=nil, c = Condition(), ofunc;
+
+			synclock.wait;
+
+			// Send node info
+			this.send("/p2psc/peerinfo", 1, groups.join(" "), defaultPaths + paths.keys.asList().join(" "));
+
+			// validates our groups/paths exist
+			ofunc = OSCFunc({|msg|
+				var updateFailed = false;
+				remoteGroups = msg[2].asString.split($ );
+				remotePaths = msg[3].asString.split($ );
+
+				groups.do{|g| if(remoteGroups.indexOfEqual(g) == nil, {updateFailed = true})};
+				paths.keys.asList().do{|p| if(remotePaths.indexOfEqual(p) == nil, {updateFailed = true})};
+
+				if (updateFailed, {"ERROR (P2PSC):: peerinfo not synchronized!".postln});
+
+				if (this.name != nil && this.name != remoteGroups[0],
+					{"P2PSC Info: Name Changed to:"+ remoteGroups[0]});
+
+				this.name = remoteGroups[0];
+				c.test=true;
+				c.signal
+			}, "/p2psc/peerinfo", addr);
+
 			this.send("/p2psc/peerinfo");
 			c.hang(0.1);
-			if (c.test == false,{"P2PSC ERR: Node is not responding!".postln});
+
+			if (c.test == false,{"ERROR (P2PSC):: Node is not responding!".postln});
 			ofunc.free;
+
+			synclock.signal;
 		}
+	}
+
+	getPeers {
+		var c = Condition(false), rPeers = nil, ofunc;
+
+		synclock.wait;
+		ofunc = OSCFunc({|msg|
+			rPeers = msg[1].asString.split($ );
+			c.test = true;
+			c.signal;
+		},"/p2psc/peernames", addr);
+
+		this.send("/p2psc/peernames");
+		c.hang(0.1);
+
+		if (rPeers == nil, {"ERROR (P2PSC):: Node is not responding!".postln});
+
+		ofunc.free; // cleanup
+		synclock.signal;
+
+		^rPeers; // return paths
 	}
 
 	getPaths { |node=nil|
 		var c = Condition(false), rPaths = nil, ofunc;
 
+		synclock.wait;
 		ofunc = OSCFunc({|msg|
 			rPaths = msg[2].asString.split($ );
 			c.test = true;
@@ -97,9 +112,11 @@ P2psc {
 		);
 
 		c.hang(0.1);
-		if (rPaths == nil, {"P2PSC ERR: Node is not responding!".postln});
+		if (rPaths == nil, {"ERROR (P2PSC):: Node is not responding!".postln});
 
 		ofunc.free; // cleanup
+		synclock.signal;
+
 		^rPaths; // return paths
 	}
 
@@ -139,6 +156,7 @@ P2psc {
 
 	getGroups { |node=nil|
 		var c = Condition(false), rGroups = nil, ofunc;
+		synclock.wait;
 
 		ofunc = OSCFunc({|msg|
 			rGroups = msg[1].asString.split($ );
@@ -156,6 +174,8 @@ P2psc {
 		if (rGroups == nil, {"P2PSC Warning: Node is not responding!".postln});
 
 		ofunc.free; //cleanup
+		synclock.signal;
+
 		^rGroups; // return groups
 	}
 
