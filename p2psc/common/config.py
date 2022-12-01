@@ -19,8 +19,6 @@ class Config():
         self.__configDict = {
             "name": ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)),
             "zeroconf": True,
-            "timeout": 20,
-            "update_interval": 3,
             "ip": None,
             "port": 3760,
         }

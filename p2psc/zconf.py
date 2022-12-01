@@ -14,7 +14,7 @@ ZEROCONF_UPDATE_INTERVAL = 15
 DEBUG_MDNS_UPDATES = False
 
 class NodeZconf():
-    ZC_SERVICE_TYPE = "_cnosc._udp.local."
+    ZC_SERVICE_TYPE = "_p2psc._udp.local."
     def __init__(self, addr: Tuple[str, int], node_callback: Callable[[Tuple[str, int], ServiceStateChange], None]) -> None:
         self._node_callback = node_callback
         self._addr = addr

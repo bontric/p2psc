@@ -25,7 +25,6 @@ import signal
 import socket
 import sys
 
-from p2psc import __version__
 from p2psc.common.args import parse_args
 from p2psc.common.config import Config
 from p2psc.common.logging import setup_logging
@@ -76,6 +75,15 @@ def main(args):
 async def main_loop(args):
     global node
     config = Config(args.config)
+
+    if args.name is not None:
+        config["name"] = args.name
+    
+    if args.ip is not None:
+        config["ip"] = args.ip
+
+    if args.port is not None:
+        config["port"] = int(args.port)
 
     if config["ip"] is None:
         for _ in range(MAX_IP_GET_ATTEMPTS):

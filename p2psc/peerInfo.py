@@ -10,9 +10,6 @@ class PeerType(Enum):
     node = 0
     client = 1
 
-
-#   remoteNode = 2 # Unused for now
-
 class PeerInfo:
     NODE_EXPIRY_T = 20  # in seconds
 

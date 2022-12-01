@@ -1,21 +1,23 @@
 """
     Setup file for p2psc.
     Use setup.cfg to configure your project.
-
-    This file was generated with PyScaffold 4.0.2.
-    PyScaffold helps you to put up the scaffold of your new Python project.
-    Learn more under: https://pyscaffold.org/
 """
+
 from setuptools import setup
 
-if __name__ == "__main__":
-    try:
-        setup(use_scm_version={"version_scheme": "no-guess-dev", "relative_to": __file__, "root": "./../"})
-    except:  # noqa
-        print(
-            "\n\nAn error occurred while building the project, "
-            "please ensure you have the most updated version of setuptools, "
-            "setuptools_scm and wheel with:\n"
-            "   pip install -U setuptools setuptools_scm wheel\n\n"
-        )
-        raise
+setup(
+    name='p2psc',
+    version='0.1.0',    
+    description='A example Python package',
+    url='https://github.com/bontric/p2psc',
+    author='Benedikt Wieder',
+    packages=['p2psc', 'p2psc.common'],
+    install_requires=['python-osc',
+                      'zeroconf',
+                      ],
+    entry_points={
+        'console_scripts': [
+            'p2psc = p2psc.main:run',
+        ],
+    }
+)

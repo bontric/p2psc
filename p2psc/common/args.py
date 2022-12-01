@@ -23,10 +23,24 @@ def parse_args(args):
         default=None,
     )
     parser.add_argument(
-        "-r",
-        "--remote",
-        dest="remotes",
-        help="Comma-seperated list of remote session strings to connect to",
+        "-a",
+        "--ip",
+        dest="ip",
+        help="Set ip address",
+        default=None,
+    )
+    parser.add_argument(
+        "-p",
+        "--port",
+        dest="port",
+        help="Set network port",
+        default=None,
+    )
+    parser.add_argument(
+        "-n",
+        "--name",
+        dest="name",
+        help="Set node name",
         default=None,
     )
     parser.add_argument(
