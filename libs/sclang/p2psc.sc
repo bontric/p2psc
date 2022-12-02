@@ -75,7 +75,10 @@ P2PSC {
 		ofunc.free; // cleanup
 		synclock.signal;
 
-		^(rPeers.sort); // return paths
+		if (rPeers != nil,
+			{^(rPeers.sort)}, // return peers
+			{^rPeers}
+		)
 	}
 
 	getPaths { |peer=nil|
@@ -101,7 +104,10 @@ P2PSC {
 		ofunc.free; // cleanup
 		synclock.signal;
 
-		^(rPaths.sort); // return paths
+		if (rPaths != nil,
+			{^(rPaths.sort)}, // return paths
+			{^rPaths}
+		)
 	}
 
 	addPath { |function, path, matching=false|
@@ -172,7 +178,10 @@ P2PSC {
 		ofunc.free; //cleanup
 		synclock.signal;
 
-		^(rGroups.sort); // return groups
+		if (rGroups != nil,
+			{^(rGroups.sort)}, // return groups
+			{^rGroups}
+		)
 	}
 
 	addGroup { |group|
