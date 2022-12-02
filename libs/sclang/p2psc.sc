@@ -138,21 +138,27 @@ P2PSC {
 	}
 
 	resetPaths {
+		synclock.wait;
 		// free old osc functions
 		paths.values.do{|ofunc| ofunc.free};
 		paths = Dictionary();
 
+
+		// Add default paths
 		// say: Prints the meassage
-		this.addPath({|msg| msg.postln}, "/say");
+		paths.put("/say", OSCFunc({|msg| msg.postln}, "/say", addr));
 
 		// hush: Frees all OSCdefs
-		this.addPath({|msg| this.resetPaths()}, "/hush");
+		paths.put("/hush", OSCFunc({|msg| this.resetPaths()}, "/hush", addr));
 
 		// load: Loads a file from given path
-		this.addPath({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load");
+		paths.put("/load", OSCFunc({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load", addr));
 
 		// reset: Recompile class interpreter
-		this.addPath({thisProcess.recompile()}, "/reset");
+		paths.put("/reset", OSCFunc({thisProcess.recompile()}, "/reset", addr));
+
+		synclock.signal;
+		this.update();
 	}
 
 	getGroups { |peer=nil|
