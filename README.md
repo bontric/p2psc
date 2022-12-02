@@ -1,12 +1,12 @@
 # p2psc 
 
-p2psc -- short for "Peer 2 Peer Sound Control" -- is an OSC path registry and message routing tool. After running `p2psc`, you can send it OSC messages to receive information about other "peers" (people also running the p2psc application) in you *local* network. Additionally, you can send OSC messages which are forwarded to a peer, or a group of peers, by using their name or group, in the OSC path. While `p2psc` is a standalone application, it can be fully configured using OSC messages. This allows any OSC-capable application to communicate with `p2psc` and participants in the network. 
+*p2psc* -- short for "Peer 2 Peer Sound Control" -- is an OSC path registry and message routing tool. After running *p2psc*, you can send it OSC messages to receive information about other "peers" (people also running the *p2psc* application) in you *local* network. Additionally, you can send OSC messages which are forwarded to a peer, or a group of peers, by using their name or group, in the OSC path. While *p2psc* is a standalone application, it can be fully configured using OSC messages. This allows any OSC-capable application to communicate with *p2psc* and participants in the network. 
 
-The main goal of p2psc is, to simplify the setup of networked music performances or installations. In most situations, you don't have to worry about the network configuration of participants, or even if some of the participants are available for a performance. Using `p2psc` you can program compositions which are dynamic in regards to participants and even their capabilities, as you are able to querry information about the participants in the network.
+The main goal of *p2psc* is, to simplify the setup of networked music performances or installations. In most situations, you don't have to worry about the network configuration of participants, or even if some of the participants are available for a performance. Using *p2psc* you can program compositions which are dynamic in regards to participants and even their capabilities, as you are able to querry information about the participants in the network.
 
 Here is an example scenario for using p2psc:
 
-Suppose 3 people are joining together: Alice, Bob and Carol. They are in the same network and have `p2psc` installed and running. Immediately, `p2psc` will find all paricipants in the network and Alice can send an OSC message to her local p2psc node:
+Suppose 3 people are joining together: Alice, Bob and Carol. They are in the same network and have *p2psc* installed and running. Immediately, *p2psc* will find all paricipants in the network and Alice can send an OSC message to her local *p2psc* node:
 
 `</Bob/hello, 123>` 
 
@@ -20,12 +20,12 @@ But, as mentioned earlier *groups* are also supported. By default, every partici
 
 Which is then forwarded to all participants who subscribe the `/hello` path. Participants can join or leave groups any time using OSC messages, which can be useful when changing groups is required for different compositions. Additionally, any participant can be in multiple groups at the same time.
 
-To simplify the interactions with `p2psc` we provide libraries which simplify the communication with your local node. For example in Supercollider you can call simple functions to subscribe paths or join groups:
+To simplify the interactions with *p2psc*, we provide libraries which simplify the communication with your local node. For example in Supercollider you can call simple functions to subscribe paths or join groups:
 
 ```sc
 p = P2PSC(); // Creates a P2PSC object which connects to the locally running p2psc node
 
-p.addGroup("/DRUMS"); // Join the "DRUMS" group to receive all messages, where the OSC path starts with /DRUMS
+p.addGroup("/PERC"); // Join the "PERC" group to receive all messages, where the OSC path starts with /DRUMS
 // Note: You still need to subscribe a path to actually receive a message
 
 // Add the path "/test" which simply prints the incoming message
