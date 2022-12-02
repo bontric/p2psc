@@ -37,7 +37,7 @@ P2PSC {
 				groups.do{|g| if(remoteGroups.indexOfEqual(g) == nil, {updateFailed = true})};
 				paths.keys.asList().do{|p| if(remotePaths.indexOfEqual(p) == nil, {updateFailed = true})};
 
-				if (updateFailed, {"ERROR (P2PSC):: peerinfo not synchronized!".postln});
+				if (updateFailed, {"ERROR: (P2PSC) peerinfo not synchronized!".postln});
 
 				if (name != nil && name != remoteGroups[0],
 					{"P2PSC Info: Name Changed to:"+ remoteGroups[0]});
@@ -50,7 +50,7 @@ P2PSC {
 			this.sendMsg("/p2psc/peerinfo");
 			c.wait;
 
-			if (c.test == false,{"ERROR (P2PSC):: Node is not responding!".postln});
+			if (c.test == false,{"ERROR: (P2PSC) Node is not responding!".postln});
 			ofunc.free;
 
 			synclock.signal;
@@ -70,7 +70,7 @@ P2PSC {
 		fork {0.1.wait;c.unhang};
 		c.hang;
 
-		if (rPeers == nil, {"ERROR (P2PSC):: Node is not responding!".postln});
+		if (rPeers == nil, {"ERROR: (P2PSC) Node is not responding!".postln});
 
 		ofunc.free; // cleanup
 		synclock.signal;
@@ -95,6 +95,8 @@ P2PSC {
 
 		fork {0.1.wait;c.unhang};
 		c.hang;
+
+		if (rPaths == nil, {"ERROR: (P2PSC) Peer is not responding!".postln});
 
 		ofunc.free; // cleanup
 		synclock.signal;
