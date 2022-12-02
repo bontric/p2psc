@@ -48,7 +48,7 @@ P2PSC {
 			}, "/p2psc/peerinfo", addr);
 
 			this.sendMsg("/p2psc/peerinfo");
-			c.hang(0.1);
+			c.wait;
 
 			if (c.test == false,{"ERROR (P2PSC):: Node is not responding!".postln});
 			ofunc.free;
@@ -63,12 +63,12 @@ P2PSC {
 		synclock.wait;
 		ofunc = OSCFunc({|msg|
 			rPeers = msg[1].asString.split($ );
-			c.test = true;
-			c.signal;
+			c.unhang;
 		},"/p2psc/peernames", addr);
 
 		this.sendMsg("/p2psc/peernames");
-		c.hang(0.1);
+		fork {0.1.wait;c.unhang};
+		c.hang;
 
 		if (rPeers == nil, {"ERROR (P2PSC):: Node is not responding!".postln});
 
@@ -93,8 +93,8 @@ P2PSC {
 			{this.sendMsg("/p2psc/paths", peer)}
 		);
 
-		c.hang(0.1);
-		if (rPaths == nil, {"ERROR (P2PSC):: Peer is not responding!".postln});
+		fork {0.1.wait;c.unhang};
+		c.hang;
 
 		ofunc.free; // cleanup
 		synclock.signal;
@@ -162,7 +162,8 @@ P2PSC {
 			{this.sendMsg("/p2psc/groups", peer)}
 		);
 
-		c.hang(0.1);
+		fork {0.1.wait;c.unhang};
+		c.hang;
 
 		if (rGroups == nil, {"P2PSC Warning: Node is not responding!".postln});
 
