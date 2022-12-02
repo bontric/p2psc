@@ -118,9 +118,9 @@ P2PSC {
 		// Note: fix OSC defs to avoid confusion when using cmd+.
 		if(matching,
 		{paths.put(path,
-				OSCdef.newMatching(path, function, path, addr))},
+				OSCFunc.newMatching(function, path, addr))},
 		{paths.put(path,
-				OSCdef(path, function, path, addr))}
+				OSCFunc(function, path, addr))}
 		);
 
 		// Synchronize peer info with node
