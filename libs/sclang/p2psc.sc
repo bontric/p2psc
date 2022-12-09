@@ -9,7 +9,6 @@ P2PSC {
 		var o = super.newCopyArgs(NetAddr.new(ip,port), Dictionary(), [], nil, Semaphore(1));
 
 		o.resetPaths(); // set default paths
-		o.update();
 
 		CmdPeriod.doOnce({o.disconnect});
 
@@ -138,27 +137,29 @@ P2PSC {
 	}
 
 	resetPaths {
-		synclock.wait;
-		// free old osc functions
-		paths.values.do{|ofunc| ofunc.free};
-		paths = Dictionary();
+		fork {
+			synclock.wait;
+			// free old osc functions
+			paths.values.do{|ofunc| ofunc.free};
+			paths = Dictionary();
 
 
-		// Add default paths
-		// say: Prints the meassage
-		paths.put("/say", OSCFunc({|msg| msg.postln}, "/say", addr));
+			// Add default paths
+			// say: Prints the meassage
+			paths.put("/say", OSCFunc({|msg| msg.postln}, "/say", addr));
 
-		// hush: Frees all OSCdefs
-		paths.put("/hush", OSCFunc({|msg| this.resetPaths()}, "/hush", addr));
+			// hush: Frees all OSCdefs
+			paths.put("/hush", OSCFunc({|msg| this.resetPaths()}, "/hush", addr));
 
-		// load: Loads a file from given path
-		paths.put("/load", OSCFunc({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load", addr));
+			// load: Loads a file from given path
+			paths.put("/load", OSCFunc({|msg| PathName.new(msg[1].asString).asAbsolutePath.load}, "/load", addr));
 
-		// reset: Recompile class interpreter
-		paths.put("/reset", OSCFunc({thisProcess.recompile()}, "/reset", addr));
+			// reset: Recompile class interpreter
+			paths.put("/reset", OSCFunc({thisProcess.recompile()}, "/reset", addr));
 
-		synclock.signal;
-		this.update();
+			synclock.signal;
+			this.update();
+		}
 	}
 
 	getGroups { |peer=nil|
