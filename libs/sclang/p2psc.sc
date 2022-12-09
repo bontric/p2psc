@@ -42,14 +42,16 @@ P2PSC {
 					{"P2PSC Info: Name Changed to:"+ remoteGroups[0]});
 
 				name = remoteGroups[0];
-				c.test=true;
-				c.signal
+				c.unhang;
 			}, "/p2psc/peerinfo", addr);
 
-			this.sendMsg("/p2psc/peerinfo");
-			c.wait;
+			name = nil; // reset name to check whether request worked
 
-			if (c.test == false,{"ERROR: (P2PSC) Node is not responding!".postln});
+			this.sendMsg("/p2psc/peerinfo");
+			fork {0.1.wait;c.unhang};
+			c.hang;
+
+			if (name == nil,{"ERROR: (P2PSC) Node is not responding!".postln});
 			ofunc.free;
 
 			synclock.signal;
