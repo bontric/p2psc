@@ -25,8 +25,6 @@ class Node(OscHandler):
         self._loop_task = None
         self._config = config
 
-        self._loop = asyncio.get_event_loop()
-
         self._enable_zeroconf = config["zeroconf"]
         if self._enable_zeroconf:
             self._zconf = NodeZconf(self._addr, self._zconf_node_callback)
@@ -42,6 +40,9 @@ class Node(OscHandler):
         }
 
     async def serve(self):
+
+        self._loop = asyncio.get_running_loop()
+
         if self._loop_task is not None:
             logging.warning("Registry already running!")
             return
