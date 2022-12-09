@@ -195,7 +195,10 @@ class Node(OscHandler):
             msg = proto.osc_dgram(proto.NODENAME, [self._registry._node_name])
             self._transport.sendto(msg, addr)
         else:
-            if message.params[0] == "":
+            if type(message.params[0]) != str:
+                logging.warning(
+                    f"Received Invalid name from {addr}: {message.address}, {message.params}")
+            elif message.params[0] == "":
                 self._registry.set_name(self._config["name"])
             else:
                 self._registry.set_name(message.params[0])
