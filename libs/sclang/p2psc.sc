@@ -116,8 +116,7 @@ P2PSC {
 			{paths.at(path).free}	// free old OSC def if path exists
 		);
 
-		// Note: fix OSC defs to avoid confusion when using cmd+.
-		if(matching,
+		if (matching,
 		{paths.put(path,
 				OSCFunc.newMatching(function, path, addr))},
 		{paths.put(path,
