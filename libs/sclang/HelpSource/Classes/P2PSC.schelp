@@ -24,6 +24,20 @@ code::
 		this.addPath({thisProcess.recompile()}, "/reset");
 ::
 
+Note that this class communicates with an external application, which means that you need to manually make
+sure, that client and server are in sync. You can call ".sync" on a p2psc instance after a call to make sure 
+everything is done before moving on. (This is just a 0.1.wait for now, but a proper sync will be added in the future)
+
+code::
+(
+	fork{
+		p = P2PSC();
+		p.sync;
+		p.setName("Alice"); 
+		p.sync;
+	}
+)
+::
 
 CLASSMETHODS::
 
@@ -40,6 +54,10 @@ returns:: A P2PSC object
 
 
 INSTANCEMETHODS::
+METHOD:: sync
+    Wait for this instance to Synchronize with the server. Can only nbe called in a routine.
+
+    Note: This function is currently just a wrapper and waits for 100ms. This will be fixed in the future
 
 METHOD:: getPeers
     Get peer names as a list of strings. 

@@ -238,6 +238,10 @@ P2PSC {
 			{"P2PSC Info: Trying to remove nonexistent group!".postln})
 	}
 
+	sync {
+		0.1.wait;
+	}
+
 	resetGroups {
 		groups = [];
 		this.update();
