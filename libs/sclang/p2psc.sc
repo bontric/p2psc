@@ -4,10 +4,40 @@ P2PSC {
 	var <groups;
 	var <name;
 	var synclock;
+	classvar <>instances;
 
 	*new { | ip="localhost", port=3760 |
-		var o = super.newCopyArgs(NetAddr.new(ip,port), Dictionary(), [], nil, Semaphore(1));
+		var o;
+		var ikey = ip ++port.asString;
 
+		/**
+		This tries to prevent users from creating multiple "duplicate" instances
+		of P2PSC clients, which can easily lead to problems: If an instance of P2PSC
+		is not properly "cleaned up" (using resetPaths()), all OSC Functions will persist.
+		This can lead to strange behaviour since incoming messages will be handled multiple
+		times.
+		**/
+		// create new dictionary for instances
+		if(P2PSC.instances == nil, {P2PSC.instances = Dictionary()});
+
+		// check if P2PSC instance for ip+port mapping already exists
+		// only creates new instance if necessary!
+		if(P2PSC.instances[ikey] != nil,
+			{ o = P2PSC.instances[ikey] },
+			{ // create new instance
+				o = super.newCopyArgs(
+					NetAddr.new(ip,port), // addr
+					Dictionary(), // paths
+					[], // groups
+					nil, // name
+					Semaphore(1), // synclock
+				);
+				P2PSC.instances[ikey] = o;
+			}
+		);
+
+
+		o.resetGroups(); // cleanup local groups
 		o.resetPaths(); // set default paths
 
 		CmdPeriod.doOnce({o.disconnect});
