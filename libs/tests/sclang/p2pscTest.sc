@@ -63,3 +63,82 @@
 )
 
 
+// One Node
+p=nil
+(
+fork {
+	p = P2PSC();
+	p.sync;
+	p.setName("Alice"); // set your name accordingly
+	p.sync;
+	p.addPath({ |msg|
+		var sleeptime = 1;
+		var freq = 200; // Change this for every node
+		msg.postln; //print message for debugging
+
+		{SinOsc.ar(freq:freq)*0.5*EnvGen.kr(Env.perc(releaseTime:sleeptime-0.01), doneAction:2)}.play;
+		fork {
+			var nextpeer;
+			var source_peer = msg[1].asString;
+			var peers = p.getPeers();
+
+			sleeptime.wait; // wait for one second
+
+			// send to the next peer in our list
+			nextpeer = peers.wrapAt(1+peers.indexOfEqual(source_peer));
+
+			p.sendMsg("/"++nextpeer++"/ping", p.name)
+		};
+	},"/ping");
+}
+)
+
+q.paths
+
+
+// Another Node
+(
+q = P2PSC(port:3760);
+q.setName("Bob"); // set your name accordingly
+
+q.addPath({ |msg|
+    var sleeptime = 1;
+    var freq = 300; // Change this for every node
+    msg.postln; //print message for debugging
+
+    {SinOsc.ar(freq:freq)*0.5*EnvGen.kr(Env.perc(releaseTime:sleeptime-0.01), doneAction:2)}.play;
+    fork {
+        var nextpeer;
+        var source_peer = msg[1].asString;
+        var peers = q.getPeers();
+
+        sleeptime.wait; // wait for one second
+
+        // send to the next peer in our list
+        nextpeer = peers.wrapAt(1+peers.indexOfEqual(source_peer));
+
+        q.sendMsg("/"++nextpeer++"/ping", q.name)
+    };
+},"/ping");
+)
+
+
+
+// Use this to start sending OSC messages
+(
+// We include the sender's name to form a circle by sending it to the next peer
+// in our (alphabetically sorted) peer list.
+fork {
+    var peer, peers;
+    peers = p.getPeers();
+    if (peers.size > 0,
+        {
+            peer = peers[0];
+            ("Sending initial ping to:"+peer).postln;
+            ("/"++peer++"/ping").postln;
+            p.sendMsg("/"++peer++"/ping" , p.name)
+        },
+        {"Error: No other peers in the network"}
+    )
+}
+)
